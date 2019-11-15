@@ -108,7 +108,7 @@ namespace STLViewer
             // init stuff
             WindowInfo = Utilities.CreateWindowsWindowInfo(panel1.Handle);
             var WindowMode = new GraphicsMode(32, 24, 0, 0, 0, 2);
-            WindowContext = new GraphicsContext(WindowMode, WindowInfo, 2, 0, GraphicsContextFlags.Debug);
+            WindowContext = new GraphicsContext(WindowMode, WindowInfo, 2, 0, GraphicsContextFlags.Default);
 
             WindowContext.MakeCurrent(WindowInfo);
             WindowContext.LoadAll();
