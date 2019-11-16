@@ -5,7 +5,7 @@ using OpenTK;
 
 namespace STLViewer
 {
-    internal struct VertexData
+    public class VertexData
     {
         public Vector4 Color;
         public Vector3 Normal, V1, V2, V3;
@@ -113,6 +113,8 @@ namespace STLViewer
                     binaryReader.Read(header, 0, 80);
 
                     Colored = colorMarker(header);
+                    if (Colored) Console.WriteLine("Color header found");
+                    var normalsRecalculated = false;
 
                     var textMode = textMarker(header);
                     if (textMode)
@@ -240,12 +242,16 @@ namespace STLViewer
                         NumTriangle = (uint)Tlist.Count;
                         Triangles = new VertexData[NumTriangle];
 
+       
                         for (var i = 0; i < NumTriangle; i++)
                         {
                             Triangles[i] = Tlist[i];
 
                             if (Triangles[i].Normal.LengthSquared < 0.9f)
+                            {
                                 Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
+                                normalsRecalculated = true;
+                            }
                         }
 
 
@@ -257,18 +263,22 @@ namespace STLViewer
                         NumTriangle = binaryReader.ReadUInt32();
 
                         Triangles = new VertexData[NumTriangle];
-
+                        
                         for (var i = 0; i < NumTriangle; i++)
                         {
                             Triangles[i] = ReadVertexData(binaryReader);
 
                             if (Triangles[i].Normal.LengthSquared < 0.9f)
+                            {
                                 Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
+                                normalsRecalculated = true;
+                            }
                         }
+                        
                     }
 
-
-                //TODO add smoothing
+                    if (normalsRecalculated) Console.WriteLine("Normals recalculated");
+                    //TODO add smoothing
 
                 }
                 catch (Exception ex)
@@ -350,4 +360,7 @@ namespace STLViewer
 
 
     }
+
+
+
 }

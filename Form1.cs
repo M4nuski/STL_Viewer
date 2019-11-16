@@ -19,9 +19,9 @@ namespace STLViewer
         public Stopwatch perfCount = new Stopwatch();
 
         // User build volume
-        private float buildVolumeWidthDiv2 = 100.0f;
-        private float buildVolumeHeight = 150.0f;
-        private float buildVolumeDepthDiv2 = 75.0f;
+        private float buildVolumeWidthDiv2;
+        private float buildVolumeHeight;
+        private float buildVolumeDepthDiv2;
 
         //OpenGL
         public IWindowInfo WindowInfo;
@@ -40,7 +40,7 @@ namespace STLViewer
         private STL_Loader loader;
         private BoundingBoxData bbData;
         private Vector3 modelPos;
-        private int colList, defList = 0;
+        private int colList, defList = -1;
 
         // user inputs
         private float px;// = 0.0f;
@@ -350,6 +350,19 @@ namespace STLViewer
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.KeyCode == Keys.F1)
+            {
+                var stlw = new STL_Writer(true);
+                stlw.addFace(new Vector3(-10.0f, -10.0f, -10.0f), new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                stlw.addFace(new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+                stlw.addFace(new Vector3(10.0f, -10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(-10.0f, -10.0f, -10.0f), new Vector4(0.0f, 0.0f, 1.0f, 1.0f));
+              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+              stlw.writeToFile("testFile.stl");
+            }
+
+
             if (e.KeyCode == Keys.Return)
             {
                 // switch to model color or default color
