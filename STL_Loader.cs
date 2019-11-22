@@ -5,10 +5,11 @@ using OpenTK;
 
 namespace STLViewer
 {
-    public class VertexData
+    public class FaceData
     {
+        public Vector3 V1, V2, V3; 
+        public Vector3 Normal;
         public Vector4 Color;
-        public Vector3 Normal, V1, V2, V3;
     }
 
     public struct BoundingBoxData
@@ -20,8 +21,9 @@ namespace STLViewer
     class STL_Loader
     {
         public readonly UInt32 NumTriangle;
-        public readonly VertexData[] Triangles;
+        public readonly FaceData[] Triangles;
         public readonly bool Colored = false;
+        public readonly string Type;
 
         private static Vector3 ReadVector3(BinaryReader reader)
         {
@@ -35,9 +37,9 @@ namespace STLViewer
                 );
         }
 
-        private static VertexData ReadVertexData(BinaryReader reader)
+        private static FaceData ReadFaceData(BinaryReader reader)
         {
-            return new VertexData {
+            return new FaceData {
                 Normal = ReadVector3(reader),
                 V1 = ReadVector3(reader),
                 V2 = ReadVector3(reader),
@@ -98,6 +100,7 @@ namespace STLViewer
         public STL_Loader(string fileName)
         {
             char[] spaceSeperator = { ' ' };
+            Type = "";
 
             if (File.Exists(fileName))
             {
@@ -122,15 +125,25 @@ namespace STLViewer
                         Console.WriteLine("Potential ASCII STL file");
                         textStream = File.OpenText(fileName);
                         var s = textStream.ReadLine()?.Trim();
-                        if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "solid") throw new Exception("Malformed ASCII STL (expected \"solid\")");
+                        if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "solid")
+                            throw new Exception("Malformed ASCII STL (expected \"solid\")");
                         s = textStream.ReadLine()?.Trim() ?? "";
                         var ss = s.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries);
                         if (ss[0].Trim() != "facet")
                         {
                             textMode = false;
                             Console.WriteLine("Hybrid STL or malformed ASCII STL");
+                            Type = "Hybrid";
+                        }
+                        else
+                        {
+                            Type = "ASCII";
                         }
                         textStream.Close();
+                    }
+                    else
+                    {
+                        Type = "Binary";
                     }
 
                     if (textMode)
@@ -138,7 +151,7 @@ namespace STLViewer
                         textStream = File.OpenText(fileName);
                         NumTriangle = 0;
                         Console.WriteLine("ASCII STL file");
-                        var Tlist = new List<VertexData>();
+                        var Tlist = new List<FaceData>();
 
                         var s = textStream.ReadLine()?.Trim(); 
                         // solid x
@@ -222,7 +235,7 @@ namespace STLViewer
                             if (s?.Trim() != "endfacet") throw new Exception("Malformed ASCII STL (expected \"endfacet\") at triangle " + NumTriangle);
 
 
-                            Tlist.Add( new VertexData()
+                            Tlist.Add( new FaceData()
                             {
                                 Color = new Vector4(0.75f, 0.75f, 0.75f, 1.0f),
                                 Normal = n,
@@ -240,7 +253,7 @@ namespace STLViewer
                         if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "endsolid") throw new Exception("Malformed ASCII STL (expected \"endsolid\"");
 
                         NumTriangle = (uint)Tlist.Count;
-                        Triangles = new VertexData[NumTriangle];
+                        Triangles = new FaceData[NumTriangle];
 
        
                         for (var i = 0; i < NumTriangle; i++)
@@ -262,11 +275,11 @@ namespace STLViewer
                         Console.WriteLine("Binary STL file");
                         NumTriangle = binaryReader.ReadUInt32();
 
-                        Triangles = new VertexData[NumTriangle];
+                        Triangles = new FaceData[NumTriangle];
                         
                         for (var i = 0; i < NumTriangle; i++)
                         {
-                            Triangles[i] = ReadVertexData(binaryReader);
+                            Triangles[i] = ReadFaceData(binaryReader);
 
                             if (Triangles[i].Normal.LengthSquared < 0.9f)
                             {
@@ -285,7 +298,7 @@ namespace STLViewer
                 {
                     Console.WriteLine("STL_Loader Error: " + ex.Message);
                     NumTriangle = 0;
-                    Triangles = new VertexData[0];
+                    Triangles = new FaceData[0];
                     Colored = false;
                 }
                 finally

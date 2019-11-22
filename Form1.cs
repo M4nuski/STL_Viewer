@@ -28,7 +28,7 @@ namespace STLViewer
         public GraphicsContext WindowContext;
         private float[] pmap; // perspective matrix
         private const float _fov = 45.0f;
-       // TODO private float smooth = 0.1f;
+        // TODO private float smooth = 0.1f;
 
         //Directory and file content
         private List<string> dirList = new List<string>();
@@ -41,6 +41,8 @@ namespace STLViewer
         private BoundingBoxData bbData;
         private Vector3 modelPos;
         private int colList, defList = -1;
+
+        private List<FaceData> data;
 
         // user inputs
         private float px;// = 0.0f;
@@ -59,7 +61,9 @@ namespace STLViewer
         private Vector3 pivot;
 
         private bool originalColors = true;
-        private Vector4 defaultColor; 
+        private Vector4 defaultColor;
+
+        private bool wiremode = false;
 
         public Form1()
         {
@@ -117,6 +121,7 @@ namespace STLViewer
             GL.Viewport(0, 0, panel1.Width, panel1.Height);
 
             GL.Enable(EnableCap.DepthTest);
+            
             GL.Disable(EnableCap.CullFace);
             GL.ClearColor(35.0f / 255.0f, 105.0f / 255.0f, 219.0f / 255.0f, 1.0f);
 
@@ -216,12 +221,22 @@ namespace STLViewer
                     Console.WriteLine(GL.GetError());
                 }
 
-                label1.Text = currentFile + " " + loader.NumTriangle + " triangles";
+                label1.Text = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ")";
             }
 
             originalColors = loader.Colored;
-
+            wiremode = false;
             Console.WriteLine("model loaded in " + (perfCount.ElapsedMilliseconds - loadStart));
+
+            if (data != null)
+            {
+                data.Clear();
+            }
+            else
+            {
+                data = new List<FaceData>();
+            }
+            if (loader?.NumTriangle > 0) for (var i = 0; i < loader?.NumTriangle; i++) data.Add(loader.Triangles[i]);
         }
 
         private void drawModel(bool overrideColors)
@@ -293,7 +308,7 @@ namespace STLViewer
                 WindowContext.MakeCurrent(WindowInfo);
                 GL.Viewport(0, 0, panel1.Width, panel1.Height);
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
+                GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
                 GL.MatrixMode(MatrixMode.Projection);
                 GL.LoadMatrix(pmap);        
                 GL.Translate(0.0f, 0.0f, -pz);
@@ -352,14 +367,111 @@ namespace STLViewer
         {
             if (e.KeyCode == Keys.F1)
             {
+                label2.Visible = !label2.Visible;
+                ReDraw();
+            }
+
+            if (e.KeyCode == Keys.F12)
+            {
                 var stlw = new STL_Writer(true);
-                stlw.addFace(new Vector3(-10.0f, -10.0f, -10.0f), new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-                stlw.addFace(new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f));
-                stlw.addFace(new Vector3(10.0f, -10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(-10.0f, -10.0f, -10.0f), new Vector4(0.0f, 0.0f, 1.0f, 1.0f));
-              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-              stlw.writeToFile("testFile.stl");
+                var offset = new Vector3(0.0f, 0.0f, -0.15f/2.0f);
+
+                // re structure : list of vertex, each face have a normal and ref 3 vertex index
+                var numVertex = data.Count * 3;
+                Console.WriteLine("num vertex " + numVertex);
+                var indices = new int[numVertex];
+                var uniqueVertex = new List<Vector3>();
+
+
+                for (var i = 0; i < data.Count; ++i)
+                {
+                    // V1
+                    var unique = true;
+                    var curVert = data[i].V1;
+                    for (var j = 0; j < uniqueVertex.Count; ++j)
+                    {
+                        if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                        {
+                            unique = false;
+                            indices[i*3] = j;
+                        }
+                    }
+                    if (unique)
+                    {
+                        uniqueVertex.Add(curVert);
+                        indices[i*3] = uniqueVertex.Count - 1;
+                    }
+
+
+                    // V2
+                    unique = true;
+                    curVert = data[i].V2;
+                    for (var j = 0; j < uniqueVertex.Count; ++j)
+                    {
+                        if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                        {
+                            unique = false;
+                            indices[i * 3] = j;
+                        }
+                    }
+                    if (unique)
+                    {
+                        uniqueVertex.Add(curVert);
+                        indices[i * 3] = uniqueVertex.Count - 1;
+                    }
+
+                    // V3
+                    unique = true;
+                    curVert = data[i].V3;
+                    for (var j = 0; j < uniqueVertex.Count; ++j)
+                    {
+                        if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                        {
+                            unique = false;
+                            indices[i * 3] = j;
+                        }
+                    }
+                    if (unique)
+                    {
+                        uniqueVertex.Add(curVert);
+                        indices[i * 3] = uniqueVertex.Count - 1;
+                    }
+                }
+
+                Console.WriteLine("num unique vertex " + uniqueVertex.Count);
+                // regroup vertex
+
+                // compensate for offset max per vertex
+
+                // inflate back to stl structure
+
+                //var counts = new int[data.Count];
+                //for (var i = 0; i < data.Count; i++) counts[i] = 0;
+
+
+
+                //     stlw.addFace(new Vector3(-10.0f, -10.0f, -10.0f), new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                //     stlw.addFace(new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+                //     stlw.addFace(new Vector3(10.0f, -10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(-10.0f, -10.0f, -10.0f), new Vector4(0.0f, 0.0f, 1.0f, 1.0f));
+                //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                try
+                {
+
+                    var fn = "testFile" + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
+                    label1.Text = "Writing to " + fn;
+                    stlw.writeToFile(fn);
+
+                }
+                catch
+                {
+                    Console.WriteLine("File Already Exists");
+                    label1.Text = "Failed to write to file";
+                }
+
+
+
             }
 
 
@@ -367,6 +479,11 @@ namespace STLViewer
             {
                 // switch to model color or default color
                 originalColors = !originalColors;
+                ReDraw();
+            }
+            if (e.KeyCode == Keys.Back)
+            {
+                wiremode = !wiremode;
                 ReDraw();
             }
             if (e.KeyCode == Keys.Right) 
