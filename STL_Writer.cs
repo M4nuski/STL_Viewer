@@ -21,8 +21,8 @@ namespace STLViewer
         private static void WriteVector3(BinaryWriter writer, Vector3 v)
         {
             writer.Write(v.X);
-            writer.Write(-v.Y);
-            writer.Write(v.Z);
+            writer.Write(-v.Z);
+            writer.Write(v.Y);
         }
 
         private static void WriteVertexData(BinaryWriter writer, FaceData vd)
