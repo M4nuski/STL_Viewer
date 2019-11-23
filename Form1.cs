@@ -409,8 +409,9 @@ namespace STLViewer
             {
                 var stlw = new STL_Writer(true);
 
-                var offset = new Vector3(0.0f, 0.0f, -4.0f);
-                offset = offset / 2.0f;
+                var offsetDirection = new Vector3(0.0f, 0.0f, 1.0f);
+                offsetDirection.Normalize();
+                var offsetLength = -2.0f; // half of overall error
 
                 // re structure : list of vertex, each face have a normal and ref 3 vertex index
                 var numVertex = data.Count * 3;
@@ -482,7 +483,7 @@ namespace STLViewer
 
                 for (var i = 0; i < data.Count; ++i)
                 {
-                    var comp = data[i].Normal * offset; // face comp
+                    var comp = data[i].Normal * offsetDirection; // face comp
 
                     uniqueVertexOffsets[indices[i].I1] += comp;
                     uniqueVertexOffsets[indices[i].I2] += comp;
@@ -492,7 +493,7 @@ namespace STLViewer
                 // normalize offset vectors and re-apply final offset              
                 for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
                 {
-                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offset;
+                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetLength;
                 }
 
                 // apply offset to data and add to writer
