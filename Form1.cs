@@ -42,6 +42,8 @@ namespace STLViewer
         private Vector3 modelPos;
         private int colList, defList = -1;
 
+        private int compList = -1;
+
         private List<FaceData> data;
 
         // user inputs
@@ -204,21 +206,23 @@ namespace STLViewer
             {
                 GL.DeleteLists(colList, 1);
                 GL.DeleteLists(defList, 1);
+                GL.DeleteLists(compList, 1);
+                compList = -1;
 
                 colList = GL.GenLists(1);
                 GL.NewList(colList, ListMode.Compile);
-                drawModel(!loader.Colored);
+                drawModel(!loader.Colored, (int)loader.NumTriangle, loader.Triangles);
                 GL.EndList();
-                Console.WriteLine(GL.GetError());
+                Console.WriteLine("Gen model list data yields " + GL.GetError());
 
                 if (!loader.Colored) defList = colList;
                 else
                 {
                     defList = GL.GenLists(1);
                     GL.NewList(defList, ListMode.Compile);
-                    drawModel(true);
+                    drawModel(true, (int)loader.NumTriangle, loader.Triangles);
                     GL.EndList();
-                    Console.WriteLine(GL.GetError());
+                    Console.WriteLine("Gen colored model list data yields " + GL.GetError());
                 }
 
                 label1.Text = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ")";
@@ -239,21 +243,21 @@ namespace STLViewer
             if (loader?.NumTriangle > 0) for (var i = 0; i < loader?.NumTriangle; i++) data.Add(loader.Triangles[i]);
         }
 
-        private void drawModel(bool overrideColors)
+        private void drawModel(bool overrideColors, int nbTriangles, FaceData[] data)
         {
             GL.Begin(PrimitiveType.Triangles);
-            for (var i = 0; i < loader.NumTriangle; i++)
+            for (var i = 0; i < nbTriangles; i++)
             {
-                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, (overrideColors) ? defaultColor : loader.Triangles[i].Color);
-                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, (overrideColors) ? defaultColor : loader.Triangles[i].Color);
-                GL.Normal3(loader.Triangles[i].Normal);
-                GL.Vertex3(loader.Triangles[i].V1);
+                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, (overrideColors) ? defaultColor : data[i].Color);
+                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, (overrideColors) ? defaultColor : data[i].Color);
+                GL.Normal3(data[i].Normal);
+                GL.Vertex3(data[i].V1);
 
-                GL.Normal3(loader.Triangles[i].Normal);
-                GL.Vertex3(loader.Triangles[i].V2);
+                GL.Normal3(data[i].Normal);
+                GL.Vertex3(data[i].V2);
 
-                GL.Normal3(loader.Triangles[i].Normal);
-                GL.Vertex3(loader.Triangles[i].V3);
+                GL.Normal3(data[i].Normal);
+                GL.Vertex3(data[i].V3);
             }
             GL.End();
         }
@@ -327,9 +331,26 @@ namespace STLViewer
 
                 // model
                 GL.Translate(modelPos);
-                if (loader?.NumTriangle > 0) GL.CallList((originalColors) ? colList : defList);
+
+                if (loader?.NumTriangle > 0)
+                {
+                    if (compList > 0)
+                    {
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                        GL.CallList(compList);
+                        GL.Disable(EnableCap.DepthTest);
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                        GL.CallList((originalColors) ? colList : defList);
+                        GL.Enable(EnableCap.DepthTest);
+                    }
+                    else
+                    {
+                        GL.CallList((originalColors) ? colList : defList);
+                    }
+                }   
 
                 WindowContext.SwapBuffers();
+
             }
         }
 
@@ -369,8 +390,10 @@ namespace STLViewer
             public int I3; // ref V3 of face
         }
 
-        private Vector3 normalize(Vector3 v)
+        private Vector3 safeNormalize(Vector3 v)
         {
+            var l = v.Length;
+            if (Math.Abs(l) < float.Epsilon) return v;
             return  v / v.Length;
         }
 
@@ -469,7 +492,7 @@ namespace STLViewer
                 // normalize offset vectors and re-apply final offset              
                 for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
                 {
-                    uniqueVertexOffsets[i] = normalize(uniqueVertexOffsets[i]) * offset;
+                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offset;
                 }
 
                 // apply offset to data and add to writer
@@ -479,20 +502,31 @@ namespace STLViewer
                     data[i].V2 += uniqueVertexOffsets[indices[i].I2];
                     data[i].V3 += uniqueVertexOffsets[indices[i].I3];
 
-                    stlw.addFace(data[i].V1, data[i].V2, data[i].V3, data[i].Normal, data[i].Color);                }
+                    stlw.addFace(data[i].V1, data[i].V2, data[i].V3, data[i].Color);
+                }
+
+
+                // create render list
+                GL.DeleteLists(compList, 1);
+
+                compList = GL.GenLists(1);
+                GL.NewList(compList, ListMode.Compile);
+                drawModel(!false, data.Count, data.ToArray());
+                GL.EndList();
+                Console.WriteLine("Gen model compList data yields " + GL.GetError());
 
                 // Save data
-                try
+              /*  try
                 {
                     var fn = Path.GetFileNameWithoutExtension(currentFile) + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
                     label1.Text = "Writing to " + fn;                    
-                    stlw.writeToFile(fn);
+                    stlw.writeToFile(fn, true);
                 }
                 catch
                 {
                     Console.WriteLine("File Already Exists");
                     label1.Text = "Failed to write to file";
-                }
+                }*/
 
 
                 ReDraw();
