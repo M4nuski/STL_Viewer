@@ -703,24 +703,62 @@ namespace STLViewer
             if (trackBarX.Visible)
             {
                 // recomp with new value and reset all data and list
-                // TODO add other axis
-                var offsetDirection = new Vector3(1.0f, 0.0f, 0.0f);
-                offsetDirection.Normalize();
-                var offsetLength = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
-                label1.Text = "Total compensation " + (2.0f*offsetLength).ToString("F3") + "mm";
+                var offsetX = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
+                var offsetY = 0.0f; // trackBarY.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
+                var offsetZ = 0.0f; // trackBarZ.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
+                label1.Text = "Total compensation (mm) X:" + (2.0f* offsetX).ToString("F3") + " Y:" + (2.0f * offsetY).ToString("F3") + " Z:" + (2.0f * offsetZ).ToString("F3");
 
                 // Prep opt and compare data
-                var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
-                var uniqueVertexOffsetsLenSq = new List<float>(uniqueVertex.Count);
-                for (var i = 0; i < uniqueVertex.Count; ++i)
-                {
-                    uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
-                    uniqueVertexOffsetsLenSq.Add(0.0f);
-                }
+                var uniqueVertexOffsets = new Vector3[uniqueVertex.Count];
+                var uniqueVertexOffsetsNeg = new Vector3[uniqueVertex.Count];
+                var uniqueVertexOffsetsPos = new Vector3[uniqueVertex.Count];
 
                 // compensate for offset, find longest normal in offset direction
                 for (var i = 0; i < loader.NumTriangle; ++i)
                 {
+                    // X
+                    if (loader.Triangles[i].Normal.X > 0.0f)
+                    {
+                        if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I1].X) uniqueVertexOffsetsPos[faceIndices[i].I1].X = loader.Triangles[i].Normal.X;
+                        if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I2].X) uniqueVertexOffsetsPos[faceIndices[i].I2].X = loader.Triangles[i].Normal.X;
+                        if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I3].X) uniqueVertexOffsetsPos[faceIndices[i].I3].X = loader.Triangles[i].Normal.X;
+                    }
+                    else
+                    {
+                        if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I1].X) uniqueVertexOffsetsNeg[faceIndices[i].I1].X = loader.Triangles[i].Normal.X;
+                        if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I2].X) uniqueVertexOffsetsNeg[faceIndices[i].I2].X = loader.Triangles[i].Normal.X;
+                        if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I3].X) uniqueVertexOffsetsNeg[faceIndices[i].I3].X = loader.Triangles[i].Normal.X;
+                    }
+
+                    // Y
+                    if (loader.Triangles[i].Normal.Y > 0.0f)
+                    {
+                        if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I1].Y) uniqueVertexOffsetsPos[faceIndices[i].I1].Y = loader.Triangles[i].Normal.Y;
+                        if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I2].Y) uniqueVertexOffsetsPos[faceIndices[i].I2].Y = loader.Triangles[i].Normal.Y;
+                        if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I3].Y) uniqueVertexOffsetsPos[faceIndices[i].I3].Y = loader.Triangles[i].Normal.Y;
+                    }
+                    else
+                    {
+                        if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I1].Y) uniqueVertexOffsetsNeg[faceIndices[i].I1].Y = loader.Triangles[i].Normal.Y;
+                        if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I2].Y) uniqueVertexOffsetsNeg[faceIndices[i].I2].Y = loader.Triangles[i].Normal.Y;
+                        if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I3].Y) uniqueVertexOffsetsNeg[faceIndices[i].I3].Y = loader.Triangles[i].Normal.Y;
+                    }
+
+                    // Z
+                    if (loader.Triangles[i].Normal.Z > 0.0f)
+                    {
+                        if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I1].Z) uniqueVertexOffsetsPos[faceIndices[i].I1].Z = loader.Triangles[i].Normal.Z;
+                        if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I2].Z) uniqueVertexOffsetsPos[faceIndices[i].I2].Z = loader.Triangles[i].Normal.Z;
+                        if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I3].Z) uniqueVertexOffsetsPos[faceIndices[i].I3].Z = loader.Triangles[i].Normal.Z;
+                    }
+                    else
+                    {
+                        if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I1].Z) uniqueVertexOffsetsNeg[faceIndices[i].I1].Z = loader.Triangles[i].Normal.Z;
+                        if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I2].Z) uniqueVertexOffsetsNeg[faceIndices[i].I2].Z = loader.Triangles[i].Normal.Z;
+                        if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I3].Z) uniqueVertexOffsetsNeg[faceIndices[i].I3].Z = loader.Triangles[i].Normal.Z;
+                    }
+
+                    /* V2
                     var comp = loader.Triangles[i].Normal * offsetDirection; // face comp
                     var compLenSq = comp.LengthSquared;
 
@@ -739,16 +777,21 @@ namespace STLViewer
                         uniqueVertexOffsets[faceIndices[i].I3] = comp;
                         uniqueVertexOffsetsLenSq[faceIndices[i].I2] = compLenSq;
                     }
-                // uniqueVertexOffsets[faceIndices[i].I1] += comp;
-                // uniqueVertexOffsets[faceIndices[i].I2] += comp;
-                // uniqueVertexOffsets[faceIndices[i].I3] += comp;
-                // TODO edge case of vertex on 2 sides
-            }
+                    */
 
-                // apply final offset              
-                for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
+                    /* v1
+                    uniqueVertexOffsets[faceIndices[i].I1] += comp;
+                    uniqueVertexOffsets[faceIndices[i].I2] += comp;
+                    uniqueVertexOffsets[faceIndices[i].I3] += comp;
+                    */
+                }
+
+                // select final offset              
+                for (var i = 0; i < uniqueVertex.Count; ++i)
                 {
-                    uniqueVertexOffsets[i] = uniqueVertexOffsets[i] * offsetLength;
+                    uniqueVertexOffsets[i].X = offsetX * (uniqueVertexOffsetsPos[i].X + uniqueVertexOffsetsNeg[i].X);
+                    uniqueVertexOffsets[i].Y = offsetY * (uniqueVertexOffsetsPos[i].Y + uniqueVertexOffsetsNeg[i].Y);
+                    uniqueVertexOffsets[i].Z = offsetZ * (uniqueVertexOffsetsPos[i].Z + uniqueVertexOffsetsNeg[i].Z);
                 }
 
                 // apply offset to data
@@ -772,7 +815,7 @@ namespace STLViewer
                 GL.NewList(compList, ListMode.Compile);
                 drawModel(!false, (int)loader.NumTriangle, newData);
                 GL.EndList();
-                Console.WriteLine("Gen model compList data yields " + GL.GetError());
+                //Console.WriteLine("Gen model compList data yields " + GL.GetError());
             }
 
             ReDraw();
