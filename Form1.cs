@@ -390,8 +390,6 @@ namespace STLViewer
         }
 
         // using Shell32;
-
-
         public static Shell shell = new Shell();
         public static Folder RecyclingBin = shell.NameSpace(ShellSpecialFolderConstants.ssfBITBUCKET);
 
@@ -427,12 +425,6 @@ namespace STLViewer
 
                 if (trackBarX.Visible && (uniqueVertex.Count == 0))
                 {
-                  /*  if (loader.NumTriangle > 5000)
-                    {
-                        Cursor.Current = Cursors.WaitCursor;
-                        Application.DoEvents();
-                    }*/
-
                     for (var i = 0; i < loader.NumTriangle; ++i)
                     {
                         if ((loader.NumTriangle > 5000) && ((i % 5000) == 0))
@@ -703,6 +695,7 @@ namespace STLViewer
         {
             GL.DeleteLists(colList, 1);
             GL.DeleteLists(defList, 1);
+            GL.DeleteLists(compList, 1);
         }
 
         private void trackBar1_ValueChanged(object sender, EventArgs e)
@@ -710,13 +703,13 @@ namespace STLViewer
             if (trackBarX.Visible)
             {
                 // recomp with new value and reset all data and list
+                // TODO add other axis
                 var offsetDirection = new Vector3(1.0f, 0.0f, 0.0f);
                 offsetDirection.Normalize();
-                var offsetLength = trackBarX.Value / 40.0f / 2.0f; // half of overall error
-                label1.Text = "Total compensation " + (2*offsetLength).ToString("F3") + "mm";
+                var offsetLength = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
+                label1.Text = "Total compensation " + (2.0f*offsetLength).ToString("F3") + "mm";
 
-
-                // compensate for offset, stack normals mult by offset vector
+                // Prep opt and compare data
                 var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
                 var uniqueVertexOffsetsLenSq = new List<float>(uniqueVertex.Count);
                 for (var i = 0; i < uniqueVertex.Count; ++i)
@@ -725,6 +718,7 @@ namespace STLViewer
                     uniqueVertexOffsetsLenSq.Add(0.0f);
                 }
 
+                // compensate for offset, find longest normal in offset direction
                 for (var i = 0; i < loader.NumTriangle; ++i)
                 {
                     var comp = loader.Triangles[i].Normal * offsetDirection; // face comp
@@ -751,14 +745,13 @@ namespace STLViewer
                 // TODO edge case of vertex on 2 sides
             }
 
-                // normalize offset vectors and re-apply final offset              
+                // apply final offset              
                 for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
                 {
-                    //  uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetDirection * offsetLength;
                     uniqueVertexOffsets[i] = uniqueVertexOffsets[i] * offsetLength;
                 }
 
-                // apply offset to data and add to writer
+                // apply offset to data
                 newData = new FaceData[loader.NumTriangle];
                 for (var i = 0; i < loader.NumTriangle; ++i)
                 {
