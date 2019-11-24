@@ -43,8 +43,12 @@ namespace STLViewer
         private int colList, defList = -1;
 
         private int compList = -1;
-
+        // Compensation data
         private List<FaceData> data;
+        public int numVertex;
+        private indiceStruct[] indices;
+        public List<Vector3> uniqueVertex = new List<Vector3>();
+
 
         // user inputs
         private float px;// = 0.0f;
@@ -174,6 +178,8 @@ namespace STLViewer
             }
         }
 
+
+
         private void loadModel()
         {
             Console.WriteLine("loading " + currentFile);
@@ -224,14 +230,13 @@ namespace STLViewer
                     GL.EndList();
                     Console.WriteLine("Gen colored model list data yields " + GL.GetError());
                 }
-
                 label1.Text = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ")";
             }
 
             originalColors = loader.Colored;
             wiremode = false;
             Console.WriteLine("model loaded in " + (perfCount.ElapsedMilliseconds - loadStart));
-
+            trackBar1.Hide();
             if (data != null)
             {
                 data.Clear();
@@ -240,7 +245,17 @@ namespace STLViewer
             {
                 data = new List<FaceData>();
             }
-            if (loader?.NumTriangle > 0) for (var i = 0; i < loader?.NumTriangle; i++) data.Add(loader.Triangles[i]);
+
+
+            if (loader?.NumTriangle > 0)
+            {
+                for (var i = 0; i < loader?.NumTriangle; i++) data.Add(loader.Triangles[i]);
+                // prep data for comp
+                numVertex = data.Count * 3;
+                indices = new indiceStruct[data.Count];
+                uniqueVertex = new List<Vector3>();
+                Console.WriteLine("num vertex " + numVertex);
+            }  
         }
 
         private void drawModel(bool overrideColors, int nbTriangles, FaceData[] data)
@@ -334,7 +349,7 @@ namespace STLViewer
 
                 if (loader?.NumTriangle > 0)
                 {
-                    if (compList > 0)
+                    if ((compList > 0) && trackBar1.Visible)
                     {
                         GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
                         GL.CallList(compList);
@@ -399,156 +414,106 @@ namespace STLViewer
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.F1)
+            if (e.KeyCode == Keys.F1) // Toggle Help label
             {
                 label2.Visible = !label2.Visible;
                 ReDraw();
             }
 
-            if (e.KeyCode == Keys.F12)
+            if (e.KeyCode == Keys.F12) // Toggle Model Compensation
             {
-                var stlw = new STL_Writer(true);
+                trackBar1.Visible = !trackBar1.Visible;
 
-                var offsetDirection = new Vector3(0.0f, 0.0f, 1.0f);
-                offsetDirection.Normalize();
-                var offsetLength = -2.0f; // half of overall error
-
-                // re structure : list of vertex, each face have a normal and ref 3 vertex index
-                var numVertex = data.Count * 3;
-                Console.WriteLine("num vertex " + numVertex);
-
-                var indices = new indiceStruct[data.Count];
-                var uniqueVertex = new List<Vector3>();
-
-                for (var i = 0; i < data.Count; ++i)
+                if (trackBar1.Visible && (uniqueVertex.Count == 0))
                 {
-                    // V1
-                    var unique = true;
-                    var curVert = data[i].V1;
-                    for (var j = 0; j < uniqueVertex.Count; ++j)
+                    for (var i = 0; i < data.Count; ++i)
                     {
-                        if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                        // V1
+                        var unique = true;
+                        var curVert = data[i].V1;
+                        for (var j = 0; j < uniqueVertex.Count; ++j)
                         {
-                            unique = false;
-                            indices[i].I1 = j;
+                            if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                            {
+                                unique = false;
+                                indices[i].I1 = j;
+                            }
+                        }
+                        if (unique)
+                        {
+                            uniqueVertex.Add(curVert);
+                            indices[i].I1 = uniqueVertex.Count - 1;
+                        }
+
+
+                        // V2
+                        unique = true;
+                        curVert = data[i].V2;
+                        for (var j = 0; j < uniqueVertex.Count; ++j)
+                        {
+                            if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                            {
+                                unique = false;
+                                indices[i].I2 = j;
+                            }
+                        }
+                        if (unique)
+                        {
+                            uniqueVertex.Add(curVert);
+                            indices[i].I2 = uniqueVertex.Count - 1;
+                        }
+
+                        // V3
+                        unique = true;
+                        curVert = data[i].V3;
+                        for (var j = 0; j < uniqueVertex.Count; ++j)
+                        {
+                            if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                            {
+                                unique = false;
+                                indices[i].I3 = j;
+                            }
+                        }
+                        if (unique)
+                        {
+                            uniqueVertex.Add(curVert);
+                            indices[i].I3 = uniqueVertex.Count - 1;
                         }
                     }
-                    if (unique)
-                    {
-                        uniqueVertex.Add(curVert);
-                        indices[i].I1 = uniqueVertex.Count - 1;
-                    }
 
-
-                    // V2
-                    unique = true;
-                    curVert = data[i].V2;
-                    for (var j = 0; j < uniqueVertex.Count; ++j)
-                    {
-                        if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
-                        {
-                            unique = false;
-                            indices[i].I2 = j;
-                        }
-                    }
-                    if (unique)
-                    {
-                        uniqueVertex.Add(curVert);
-                        indices[i].I2 = uniqueVertex.Count - 1;
-                    }
-
-                    // V3
-                    unique = true;
-                    curVert = data[i].V3;
-                    for (var j = 0; j < uniqueVertex.Count; ++j)
-                    {
-                        if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
-                        {
-                            unique = false;
-                            indices[i].I3 = j;
-                        }
-                    }
-                    if (unique)
-                    {
-                        uniqueVertex.Add(curVert);
-                        indices[i].I3 = uniqueVertex.Count - 1;
-                    }
+                    Console.WriteLine("num unique vertex " + uniqueVertex.Count);
                 }
-
-                Console.WriteLine("num unique vertex " + uniqueVertex.Count);
-
-                // compensate for offset, stack normals mult by offset vector
-                var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
-                for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
-
-                for (var i = 0; i < data.Count; ++i)
-                {
-                    var comp = data[i].Normal * offsetDirection; // face comp
-
-                    uniqueVertexOffsets[indices[i].I1] += comp;
-                    uniqueVertexOffsets[indices[i].I2] += comp;
-                    uniqueVertexOffsets[indices[i].I3] += comp;
-                }
-
-                // normalize offset vectors and re-apply final offset              
-                for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
-                {
-                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetLength;
-                }
-
-                // apply offset to data and add to writer
-                for (var i = 0; i < data.Count; ++i)
-                {
-                    data[i].V1 += uniqueVertexOffsets[indices[i].I1];
-                    data[i].V2 += uniqueVertexOffsets[indices[i].I2];
-                    data[i].V3 += uniqueVertexOffsets[indices[i].I3];
-
-                    stlw.addFace(data[i].V1, data[i].V2, data[i].V3, data[i].Color);
-                }
-
-
-                // create render list
-                GL.DeleteLists(compList, 1);
-
-                compList = GL.GenLists(1);
-                GL.NewList(compList, ListMode.Compile);
-                drawModel(!false, data.Count, data.ToArray());
-                GL.EndList();
-                Console.WriteLine("Gen model compList data yields " + GL.GetError());
-
+            }
+            if ((e.KeyCode == Keys.S) && (e.Control)) // Save Compensated model
+            {
+                //var stlw = new STL_Writer(true);
                 // Save data
-              /*  try
-                {
-                    var fn = Path.GetFileNameWithoutExtension(currentFile) + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
-                    label1.Text = "Writing to " + fn;                    
-                    stlw.writeToFile(fn, true);
-                }
-                catch
-                {
-                    Console.WriteLine("File Already Exists");
-                    label1.Text = "Failed to write to file";
-                }*/
-
-
-                ReDraw();
+                /*  try
+                  {
+                      var fn = Path.GetFileNameWithoutExtension(currentFile) + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
+                      label1.Text = "Writing to " + fn;                    
+                      stlw.writeToFile(fn, true);
+                  }
+                  catch
+                  {
+                      Console.WriteLine("File Already Exists");
+                      label1.Text = "Failed to write to file";
+                  }*/
             }
 
-
-            if (e.KeyCode == Keys.Return)
+            if (e.KeyCode == Keys.C) // Toggle model colors
             {
-                // switch to model color or default color
                 originalColors = !originalColors;
                 ReDraw();
             }
-            if (e.KeyCode == Keys.Back)
+            if (e.KeyCode == Keys.W) // Toggle wireframe
             {
                 wiremode = !wiremode;
                 ReDraw();
             }
-            if (e.KeyCode == Keys.Right)
+            if (e.KeyCode == Keys.Right) // Next model in folder
             {
-
-                // Load next model in folder
+                trackBar1.Hide();
                 currentIndex++;
                 if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                 else if (dirList.Count > 0)
@@ -559,9 +524,9 @@ namespace STLViewer
                 }
             }
 
-            if (e.KeyCode == Keys.Left)
+            if (e.KeyCode == Keys.Left) // Previous model in folder
             {
-                // Load previous model in folder
+                trackBar1.Hide();
                 currentIndex--;
                 if (currentIndex < 0) currentIndex = 0;
                 else if (dirList.Count > 0)
@@ -572,9 +537,9 @@ namespace STLViewer
                 }
             }
 
-            if (e.KeyCode == Keys.Delete)
+            if (e.KeyCode == Keys.Delete)  // Delete model file (after confirmation dialog)
             {
-                // Delete model file (after confirmation dialog)
+                trackBar1.Hide();
                 if (MessageBox.Show(this, "Delete current file ?", "Warning", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
                     RecyclingBin.MoveHere(basePath + currentFile);
@@ -723,6 +688,62 @@ namespace STLViewer
         {
             GL.DeleteLists(colList, 1);
             GL.DeleteLists(defList, 1);
+        }
+
+        private void trackBar1_ValueChanged(object sender, EventArgs e)
+        {
+            if (trackBar1.Visible)
+            {
+                // recomp with new value and reset all data and list
+                var offsetDirection = new Vector3(0.0f, 0.0f, 1.0f);
+                offsetDirection.Normalize();
+                var offsetLength = trackBar1.Value / 40.0f; // half of overall error
+                label1.Text = offsetLength.ToString("F3");
+
+
+                // compensate for offset, stack normals mult by offset vector
+                var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
+                for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
+
+                for (var i = 0; i < data.Count; ++i)
+                {
+                    var comp = data[i].Normal * offsetDirection; // face comp
+
+                    uniqueVertexOffsets[indices[i].I1] += comp;
+                    uniqueVertexOffsets[indices[i].I2] += comp;
+                    uniqueVertexOffsets[indices[i].I3] += comp;
+                }
+
+                // normalize offset vectors and re-apply final offset              
+                for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
+                {
+                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetLength;
+                }
+
+                // apply offset to data and add to writer
+                var newData = new FaceData[data.Count];
+                for (var i = 0; i < data.Count; ++i)
+                {
+                    newData[i] = new FaceData
+                    {
+                        V1 = data[i].V1 + uniqueVertexOffsets[indices[i].I1],
+                        V2 = data[i].V2 + uniqueVertexOffsets[indices[i].I2],
+                        V3 = data[i].V3 + uniqueVertexOffsets[indices[i].I3],
+                        Normal = data[i].Normal,
+                        Color = data[i].Color
+                    };
+                }
+
+                // create render list
+                GL.DeleteLists(compList, 1);
+
+                compList = GL.GenLists(1);
+                GL.NewList(compList, ListMode.Compile);
+                drawModel(!false, data.Count, newData);
+                GL.EndList();
+                Console.WriteLine("Gen model compList data yields " + GL.GetError());
+            }
+            ReDraw();
         }
 
         private void Form1_DragEnter(object sender, DragEventArgs e)

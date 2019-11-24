@@ -123,8 +123,8 @@ Left/Right Arrows: Previous/Next File
 Delete: Move file to recycle bin
 Wheel-Click-Drag: Pan
 Left-Click-Drag: Rotate
-Enter: Toggle model color/default color
-BackSpace: Toggle wireframe mode
-F12: Write compensated model </value>
+C: Toggle model color/default color
+W: Toggle wireframe mode
+F12: Model compensation (Ctrl-S to save)</value>
   </data>
 </root>
