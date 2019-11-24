@@ -427,18 +427,19 @@ namespace STLViewer
 
                 if (trackBarX.Visible && (uniqueVertex.Count == 0))
                 {
-                    if (loader.NumTriangle > 5000)
+                  /*  if (loader.NumTriangle > 5000)
                     {
                         Cursor.Current = Cursors.WaitCursor;
                         Application.DoEvents();
-                    }
+                    }*/
 
                     for (var i = 0; i < loader.NumTriangle; ++i)
                     {
-                        if ((i != 0) && ((i % 5000) == 0))
+                        if ((loader.NumTriangle > 5000) && ((i % 5000) == 0))
                         {
-                            Cursor.Current = Cursors.WaitCursor;
+                            label1.Text = $"Analysing model {(int)(100 * i / loader.NumTriangle)}%";
                             Application.DoEvents();
+                            Cursor.Current = Cursors.WaitCursor;
                         }
                         // V1
                         var unique = true;
@@ -493,6 +494,7 @@ namespace STLViewer
                         }
                     }
 
+                    label1.Text = $"Found {uniqueVertex.Count} unique vertex out of {loader.NumTriangle*3}"; 
                     Console.WriteLine("num unique vertex " + uniqueVertex.Count);
                     Cursor.Current = Cursors.Default;
                 }
@@ -716,9 +718,12 @@ namespace STLViewer
 
                 // compensate for offset, stack normals mult by offset vector
                 var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
-                for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
                 var uniqueVertexOffsetsLenSq = new List<float>(uniqueVertex.Count);
-                for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsetsLenSq.Add(0.0f);
+                for (var i = 0; i < uniqueVertex.Count; ++i)
+                {
+                    uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
+                    uniqueVertexOffsetsLenSq.Add(0.0f);
+                }
 
                 for (var i = 0; i < loader.NumTriangle; ++i)
                 {
