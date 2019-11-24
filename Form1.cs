@@ -85,7 +85,6 @@ namespace STLViewer
             }
             catch (Exception ex)
             {
-
                 defaultColor = new Vector4(0.75f, 0.75f, 0.75f, 1.0f);
                 Console.WriteLine("error reading default color assembly properties: " + ex.Message);
             }
@@ -114,7 +113,7 @@ namespace STLViewer
         private void Form1_Load(object sender, EventArgs e)
         {
             // init stuff
-            WindowInfo = Utilities.CreateWindowsWindowInfo(panel1.Handle);
+            WindowInfo = Utilities.CreateWindowsWindowInfo(renderPanel.Handle);
             var WindowMode = new GraphicsMode(32, 24, 0, 0, 0, 2);
             WindowContext = new GraphicsContext(WindowMode, WindowInfo, 2, 0, GraphicsContextFlags.Default);
 
@@ -122,7 +121,7 @@ namespace STLViewer
             WindowContext.LoadAll();
 
             WindowContext.SwapInterval = 1;
-            GL.Viewport(0, 0, panel1.Width, panel1.Height);
+            GL.Viewport(0, 0, renderPanel.Width, renderPanel.Height);
 
             GL.Enable(EnableCap.DepthTest);
 
@@ -136,7 +135,7 @@ namespace STLViewer
 
             GL.Enable(EnableCap.Light0);
 
-            //            GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
+            //GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
             GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Specular, new Color4(0.0f, 0.0f, 0.0f, 1.0f));
             GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Shininess, 127.0f);
 
@@ -235,7 +234,7 @@ namespace STLViewer
             originalColors = loader.Colored;
             wiremode = false;
             Console.WriteLine("model loaded in " + (perfCount.ElapsedMilliseconds - loadStart));
-            trackBarX.Hide();
+            compCtrlPanel.Hide();
 
             if (loader?.NumTriangle > 0)
             {
@@ -267,7 +266,7 @@ namespace STLViewer
 
         private void resetSizes()
         {
-            panel1.Size = ClientSize;
+            renderPanel.Size = ClientSize;
             if (WindowInfo != null)
             {
                 setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
@@ -313,7 +312,7 @@ namespace STLViewer
 
                 // redraw
                 WindowContext.MakeCurrent(WindowInfo);
-                GL.Viewport(0, 0, panel1.Width, panel1.Height);
+                GL.Viewport(0, 0, renderPanel.Width, renderPanel.Height);
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 
                 GL.MatrixMode(MatrixMode.Projection);
@@ -337,7 +336,7 @@ namespace STLViewer
 
                 if (loader?.NumTriangle > 0)
                 {
-                    if ((compList > 0) && trackBarX.Visible)
+                    if ((compList > 0) && compCtrlPanel.Visible)
                     {
                         if (wiremode)
                         {
@@ -421,9 +420,9 @@ namespace STLViewer
 
             if (e.KeyCode == Keys.F12) // Toggle Model Compensation
             {
-                trackBarX.Visible = !trackBarX.Visible;
+                compCtrlPanel.Visible = !compCtrlPanel.Visible;
 
-                if (trackBarX.Visible && (uniqueVertex.Count == 0))
+                if (compCtrlPanel.Visible && (uniqueVertex.Count == 0))
                 {
                     for (var i = 0; i < loader.NumTriangle; ++i)
                     {
@@ -524,7 +523,7 @@ namespace STLViewer
             }
             if (e.KeyCode == Keys.Right) // Next model in folder
             {
-                trackBarX.Hide();
+                compCtrlPanel.Hide();
                 currentIndex++;
                 if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                 else if (dirList.Count > 0)
@@ -536,7 +535,7 @@ namespace STLViewer
 
             if (e.KeyCode == Keys.Left) // Previous model in folder
             {
-                trackBarX.Hide();
+                compCtrlPanel.Hide();
                 currentIndex--;
                 if (currentIndex < 0) currentIndex = 0;
                 else if (dirList.Count > 0)
@@ -548,7 +547,7 @@ namespace STLViewer
 
             if (e.KeyCode == Keys.Delete)  // Delete model file (after confirmation dialog)
             {
-                trackBarX.Hide();
+                compCtrlPanel.Hide();
                 if (MessageBox.Show(this, "Delete current file ?", "Warning", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
                     RecyclingBin.MoveHere(basePath + currentFile);
@@ -700,12 +699,12 @@ namespace STLViewer
 
         private void trackBar1_ValueChanged(object sender, EventArgs e)
         {
-            if (trackBarX.Visible)
+            if (compCtrlPanel.Visible)
             {
                 // recomp with new value and reset all data and list
                 var offsetX = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
-                var offsetY = 0.0f; // trackBarY.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
-                var offsetZ = 0.0f; // trackBarZ.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
+                var offsetY = trackBarY.Value / 40.0f / 2.0f;
+                var offsetZ = trackBarZ.Value / 40.0f / 2.0f;
                 label1.Text = "Total compensation (mm) X:" + (2.0f* offsetX).ToString("F3") + " Y:" + (2.0f * offsetY).ToString("F3") + " Z:" + (2.0f * offsetZ).ToString("F3");
 
                 // Prep opt and compare data
