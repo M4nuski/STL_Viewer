@@ -117,4 +117,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="label2.Text" xml:space="preserve">
+    <value>F1: Toggle this Help
+Left/Right Arrows: Previous/Next File
+Delete: Move file to recycle bin
+Wheel-Click-Drag: Pan
+Left-Click-Drag: Rotate
+C: Toggle model color/default color
+W: Toggle wireframe mode
+F12: Model compensation (Ctrl-S to save)</value>
+  </data>
 </root>

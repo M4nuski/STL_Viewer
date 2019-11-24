@@ -28,7 +28,7 @@ namespace STLViewer
         public GraphicsContext WindowContext;
         private float[] pmap; // perspective matrix
         private const float _fov = 45.0f;
-       // TODO private float smooth = 0.1f;
+        // TODO private float smooth = 0.1f;
 
         //Directory and file content
         private List<string> dirList = new List<string>();
@@ -41,6 +41,15 @@ namespace STLViewer
         private BoundingBoxData bbData;
         private Vector3 modelPos;
         private int colList, defList = -1;
+
+        private int compList = -1;
+        // Compensation data
+        private List<FaceData> data;
+        private FaceData[] newData; // = new FaceData[];
+        public int numVertex;
+        private indiceStruct[] indices;
+        public List<Vector3> uniqueVertex = new List<Vector3>();
+
 
         // user inputs
         private float px;// = 0.0f;
@@ -59,7 +68,9 @@ namespace STLViewer
         private Vector3 pivot;
 
         private bool originalColors = true;
-        private Vector4 defaultColor; 
+        private Vector4 defaultColor;
+
+        private bool wiremode = false;
 
         public Form1()
         {
@@ -77,10 +88,10 @@ namespace STLViewer
             }
             catch (Exception ex)
             {
-                
-                defaultColor = new Vector4( 0.75f, 0.75f, 0.75f, 1.0f);
+
+                defaultColor = new Vector4(0.75f, 0.75f, 0.75f, 1.0f);
                 Console.WriteLine("error reading default color assembly properties: " + ex.Message);
-            } 
+            }
 
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
@@ -117,6 +128,7 @@ namespace STLViewer
             GL.Viewport(0, 0, panel1.Width, panel1.Height);
 
             GL.Enable(EnableCap.DepthTest);
+
             GL.Disable(EnableCap.CullFace);
             GL.ClearColor(35.0f / 255.0f, 105.0f / 255.0f, 219.0f / 255.0f, 1.0f);
 
@@ -127,7 +139,7 @@ namespace STLViewer
 
             GL.Enable(EnableCap.Light0);
 
-//            GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
+            //            GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, new Color4(0.2f, 0.2f, 0.2f, 1.0f));
             GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Specular, new Color4(0.0f, 0.0f, 0.0f, 1.0f));
             GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Shininess, 127.0f);
 
@@ -167,6 +179,8 @@ namespace STLViewer
             }
         }
 
+
+
         private void loadModel()
         {
             Console.WriteLine("loading " + currentFile);
@@ -191,54 +205,76 @@ namespace STLViewer
 
             py = (bbData.maxY - bbData.minY) / -2.0f;
             px = 0;
-           // rx = 0;
-           // ry = 0;
+            // rx = 0;
+            // ry = 0;
 
             // prepare model data
             if (loader?.NumTriangle > 0)
             {
                 GL.DeleteLists(colList, 1);
                 GL.DeleteLists(defList, 1);
+                GL.DeleteLists(compList, 1);
+                compList = -1;
 
-                colList = GL.GenLists(1);                   
+                colList = GL.GenLists(1);
                 GL.NewList(colList, ListMode.Compile);
-                    drawModel(!loader.Colored);
+                drawModel(!loader.Colored, (int)loader.NumTriangle, loader.Triangles);
                 GL.EndList();
-                Console.WriteLine(GL.GetError());
+                Console.WriteLine("Gen model list data yields " + GL.GetError());
 
                 if (!loader.Colored) defList = colList;
                 else
                 {
                     defList = GL.GenLists(1);
                     GL.NewList(defList, ListMode.Compile);
-                        drawModel(true);
+                    drawModel(true, (int)loader.NumTriangle, loader.Triangles);
                     GL.EndList();
-                    Console.WriteLine(GL.GetError());
+                    Console.WriteLine("Gen colored model list data yields " + GL.GetError());
                 }
+                label1.Text = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ")";
 
-                label1.Text = currentFile + " " + loader.NumTriangle + " triangles";
             }
 
             originalColors = loader.Colored;
-
+            wiremode = false;
             Console.WriteLine("model loaded in " + (perfCount.ElapsedMilliseconds - loadStart));
+            trackBar1.Hide();
+            if (data != null)
+            {
+                data.Clear();
+            }
+            else
+            {
+                data = new List<FaceData>();
+            }
+
+
+            if (loader?.NumTriangle > 0)
+            {
+                for (var i = 0; i < loader?.NumTriangle; i++) data.Add(loader.Triangles[i]);
+                // prep data for comp
+                numVertex = data.Count * 3;
+                indices = new indiceStruct[data.Count];
+                uniqueVertex = new List<Vector3>();
+                Console.WriteLine("num vertex " + numVertex);
+            }  
         }
 
-        private void drawModel(bool overrideColors)
+        private void drawModel(bool overrideColors, int nbTriangles, FaceData[] data)
         {
             GL.Begin(PrimitiveType.Triangles);
-            for (var i = 0; i < loader.NumTriangle; i++)
+            for (var i = 0; i < nbTriangles; i++)
             {
-                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, (overrideColors) ? defaultColor : loader.Triangles[i].Color);
-                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, (overrideColors) ? defaultColor : loader.Triangles[i].Color);
-                GL.Normal3(loader.Triangles[i].Normal);
-                GL.Vertex3(loader.Triangles[i].V1);
+                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, (overrideColors) ? defaultColor : data[i].Color);
+                GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, (overrideColors) ? defaultColor : data[i].Color);
+                GL.Normal3(data[i].Normal);
+                GL.Vertex3(data[i].V1);
 
-                GL.Normal3(loader.Triangles[i].Normal);
-                GL.Vertex3(loader.Triangles[i].V2);
+                GL.Normal3(data[i].Normal);
+                GL.Vertex3(data[i].V2);
 
-                GL.Normal3(loader.Triangles[i].Normal);
-                GL.Vertex3(loader.Triangles[i].V3);
+                GL.Normal3(data[i].Normal);
+                GL.Vertex3(data[i].V3);
             }
             GL.End();
         }
@@ -293,9 +329,9 @@ namespace STLViewer
                 WindowContext.MakeCurrent(WindowInfo);
                 GL.Viewport(0, 0, panel1.Width, panel1.Height);
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
+                GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
                 GL.MatrixMode(MatrixMode.Projection);
-                GL.LoadMatrix(pmap);        
+                GL.LoadMatrix(pmap);
                 GL.Translate(0.0f, 0.0f, -pz);
                 GL.Rotate(rx, 1.0f, 0.0f, 0.0f); // ang in degrees
                 GL.Rotate(ry, 0.0f, 1.0f, 0.0f);
@@ -312,9 +348,26 @@ namespace STLViewer
 
                 // model
                 GL.Translate(modelPos);
-                if (loader?.NumTriangle > 0) GL.CallList((originalColors) ? colList : defList);
+
+                if (loader?.NumTriangle > 0)
+                {
+                    if ((compList > 0) && trackBar1.Visible)
+                    {
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                        GL.CallList(compList);
+                        GL.Disable(EnableCap.DepthTest);
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                        GL.CallList((originalColors) ? colList : defList);
+                        GL.Enable(EnableCap.DepthTest);
+                    }
+                    else
+                    {
+                        GL.CallList((originalColors) ? colList : defList);
+                    }
+                }   
 
                 WindowContext.SwapBuffers();
+
             }
         }
 
@@ -322,7 +375,7 @@ namespace STLViewer
         {
             var f = (float)(1.0 / Math.Tan(FOV / 2.0));
             var nf = (float)(1.0 / (Near - Far));
-            
+
             pmap[0] = f / AR;
             pmap[1] = 0.0f;
             pmap[2] = 0.0f;
@@ -341,64 +394,168 @@ namespace STLViewer
             pmap[15] = 0.0f;
         }
 
-       // using Shell32;
+        // using Shell32;
 
 
         public static Shell shell = new Shell();
         public static Folder RecyclingBin = shell.NameSpace(ShellSpecialFolderConstants.ssfBITBUCKET);
 
+        private struct indiceStruct
+        {
+            public int I1; // ref V1 of face
+            public int I2; // ref V2 of face
+            public int I3; // ref V3 of face
+        }
+
+        private Vector3 safeNormalize(Vector3 v)
+        {
+            var l = v.Length;
+            if (Math.Abs(l) < float.Epsilon) return v;
+            return  v / v.Length;
+        }
+
+        private bool epsEqual(Vector3 Va, Vector3 Vb, float Eps)
+        {
+            return (Math.Abs(Va.X - Vb.X) <= Eps) && (Math.Abs(Va.Y - Vb.Y) <= Eps) & (Math.Abs(Va.Z - Vb.Z) <= Eps);
+        }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.F1)
+            if (e.KeyCode == Keys.F1) // Toggle Help label
             {
-                var stlw = new STL_Writer(true);
-                stlw.addFace(new Vector3(-10.0f, -10.0f, -10.0f), new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-                stlw.addFace(new Vector3(-10.0f, 10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(10.0f, -10.0f, -10.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f));
-                stlw.addFace(new Vector3(10.0f, -10.0f, -10.0f), new Vector3(10.0f, 10.0f, -10.0f), new Vector3(-10.0f, -10.0f, -10.0f), new Vector4(0.0f, 0.0f, 1.0f, 1.0f));
-              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-              //  stlw.addFace(new Vector3(-10.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-              stlw.writeToFile("testFile.stl");
+                label2.Visible = !label2.Visible;
             }
 
-
-            if (e.KeyCode == Keys.Return)
+            if (e.KeyCode == Keys.F12) // Toggle Model Compensation
             {
-                // switch to model color or default color
+                trackBar1.Visible = !trackBar1.Visible;
+
+                if (trackBar1.Visible && (uniqueVertex.Count == 0))
+                {
+                    if (data.Count > 5000)
+                    {
+                        Cursor.Current = Cursors.WaitCursor;
+                        Application.DoEvents();
+                    }
+
+                    for (var i = 0; i < data.Count; ++i)
+                    {
+                        if ((i != 0) && ((i % 5000) == 0)) Application.DoEvents();
+                        // V1
+                        var unique = true;
+                        var curVert = data[i].V1;
+                        for (var j = 0; j < uniqueVertex.Count; ++j)
+                        {
+                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                            {
+                                unique = false;
+                                indices[i].I1 = j;
+                            }
+                        }
+                        if (unique)
+                        {
+                            uniqueVertex.Add(curVert);
+                            indices[i].I1 = uniqueVertex.Count - 1;
+                        }
+
+
+                        // V2
+                        unique = true;
+                        curVert = data[i].V2;
+                        for (var j = 0; j < uniqueVertex.Count; ++j)
+                        {
+                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                            {
+                                unique = false;
+                                indices[i].I2 = j;
+                            }
+                        }
+                        if (unique)
+                        {
+                            uniqueVertex.Add(curVert);
+                            indices[i].I2 = uniqueVertex.Count - 1;
+                        }
+
+                        // V3
+                        unique = true;
+                        curVert = data[i].V3;
+                        for (var j = 0; j < uniqueVertex.Count; ++j)
+                        {
+                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                            {
+                                unique = false;
+                                indices[i].I3 = j;
+                            }
+                        }
+                        if (unique)
+                        {
+                            uniqueVertex.Add(curVert);
+                            indices[i].I3 = uniqueVertex.Count - 1;
+                        }
+                    }
+
+                    Console.WriteLine("num unique vertex " + uniqueVertex.Count);
+                    Cursor.Current = Cursors.Default;
+                }
+            }
+            if ((e.KeyCode == Keys.S) && (e.Control)) // Save Compensated model
+            {
+                if (compList != -1)
+                {
+                    var stlw = new STL_Writer(true);
+                    for (int i = 0; i < data.Count; i++)
+                    {
+                        stlw.addFace(newData[i]);
+                    }
+                    try
+                    {
+                        var fn = Path.GetFileNameWithoutExtension(currentFile) + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
+                        label1.Text = "Writing to " + fn;
+                        stlw.writeToFile(fn, true);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("File Already Exists");
+                        label1.Text = "Failed to write to file";
+                    }
+                }
+            }
+
+            if (e.KeyCode == Keys.C) // Toggle model colors
+            {
                 originalColors = !originalColors;
-                ReDraw();
             }
-            if (e.KeyCode == Keys.Right) 
+            if (e.KeyCode == Keys.W) // Toggle wireframe
             {
-
-                // Load next model in folder
-                currentIndex ++;
-                if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1; 
+                wiremode = !wiremode;
+            }
+            if (e.KeyCode == Keys.Right) // Next model in folder
+            {
+                trackBar1.Hide();
+                currentIndex++;
+                if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                 else if (dirList.Count > 0)
                 {
                     currentFile = dirList[currentIndex];
                     loadModel();
-                    ReDraw();
                 }
             }
 
-            if (e.KeyCode == Keys.Left)
+            if (e.KeyCode == Keys.Left) // Previous model in folder
             {
-                // Load previous model in folder
+                trackBar1.Hide();
                 currentIndex--;
                 if (currentIndex < 0) currentIndex = 0;
                 else if (dirList.Count > 0)
                 {
                     currentFile = dirList[currentIndex];
                     loadModel();
-                    ReDraw();
                 }
             }
 
-            if (e.KeyCode == Keys.Delete)
+            if (e.KeyCode == Keys.Delete)  // Delete model file (after confirmation dialog)
             {
-                // Delete model file (after confirmation dialog)
+                trackBar1.Hide();
                 if (MessageBox.Show(this, "Delete current file ?", "Warning", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
                     RecyclingBin.MoveHere(basePath + currentFile);
@@ -409,23 +566,22 @@ namespace STLViewer
                     {
                         loader = null;
                         currentIndex = -1;
-                        ReDraw();
                     }
                     else if (dirList.Count == 1)
                     {
                         currentIndex = 0;
                         currentFile = dirList[currentIndex];
                         loadModel();
-                        ReDraw();
-                    } else
+                    }
+                    else
                     {
                         if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                         currentFile = dirList[currentIndex];
                         loadModel();
-                        ReDraw();
                     }
                 }
             }
+            ReDraw();
         }
 
         private void drawBuildVolume()
@@ -546,6 +702,63 @@ namespace STLViewer
         {
             GL.DeleteLists(colList, 1);
             GL.DeleteLists(defList, 1);
+        }
+
+        private void trackBar1_ValueChanged(object sender, EventArgs e)
+        {
+            if (trackBar1.Visible)
+            {
+                // recomp with new value and reset all data and list
+                var offsetDirection = new Vector3(1.0f, 0.0f, 0.0f);
+                offsetDirection.Normalize();
+                var offsetLength = trackBar1.Value / 40.0f / 2.0f; // half of overall error
+                label1.Text = "Total compensation " + (2*offsetLength).ToString("F3") + "mm";
+
+
+                // compensate for offset, stack normals mult by offset vector
+                var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
+                for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
+
+                for (var i = 0; i < data.Count; ++i)
+                {
+                    var comp = data[i].Normal * offsetDirection; // face comp
+
+                    uniqueVertexOffsets[indices[i].I1] += comp;
+                    uniqueVertexOffsets[indices[i].I2] += comp;
+                    uniqueVertexOffsets[indices[i].I3] += comp;
+                }
+
+                // normalize offset vectors and re-apply final offset              
+                for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
+                {
+                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetDirection * offsetLength;
+                }
+
+                // apply offset to data and add to writer
+                newData = new FaceData[data.Count];
+                for (var i = 0; i < data.Count; ++i)
+                {
+                    newData[i] = new FaceData
+                    {
+                        V1 = data[i].V1 + uniqueVertexOffsets[indices[i].I1],
+                        V2 = data[i].V2 + uniqueVertexOffsets[indices[i].I2],
+                        V3 = data[i].V3 + uniqueVertexOffsets[indices[i].I3],
+                        Normal = data[i].Normal,
+                        Color = data[i].Color
+                    };
+                }
+
+                // create render list
+                GL.DeleteLists(compList, 1);
+
+                compList = GL.GenLists(1);
+                GL.NewList(compList, ListMode.Compile);
+                drawModel(!false, data.Count, newData);
+                GL.EndList();
+                Console.WriteLine("Gen model compList data yields " + GL.GetError());
+            }
+
+            ReDraw();
         }
 
         private void Form1_DragEnter(object sender, DragEventArgs e)

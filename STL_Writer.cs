@@ -7,25 +7,25 @@ namespace STLViewer
 {
     class STL_Writer
     {
-        public List<VertexData> Triangles;
+        public List<FaceData> Triangles;
         public UInt32 NumTriangle => (UInt32)Triangles.Count;
         public bool Colored = false;
         public Vector4 defaultColor = new Vector4(0.8f, 0.8f, 0.8f, 1.0f);
 
         public STL_Writer(bool useColors = false)
         {
-            Triangles = new List<VertexData>();
+            Triangles = new List<FaceData>();
             Colored = useColors;
         }
 
         private static void WriteVector3(BinaryWriter writer, Vector3 v)
         {
             writer.Write(v.X);
-            writer.Write(-v.Y);
-            writer.Write(v.Z);
+            writer.Write(-v.Z);
+            writer.Write(v.Y);
         }
 
-        private static void WriteVertexData(BinaryWriter writer, VertexData vd)
+        private static void WriteVertexData(BinaryWriter writer, FaceData vd)
         {
             WriteVector3(writer, vd.Normal);
             WriteVector3(writer, vd.V1);
@@ -64,20 +64,24 @@ namespace STLViewer
                 writer.Write(Convert.ToByte(' '));
             }
         }
+        public void addFace(FaceData face)
+        {
+            Triangles.Add(face);
+        }
 
         public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 normal, Vector4 color)
         {
-            Triangles.Add(new VertexData() { V1 = v1, V2 = v2, V3 = v3, Normal = normal, Color = color} );
+            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = normal, Color = color} );
         }
 
         public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 normal)
         {
-            Triangles.Add(new VertexData() { V1 = v1, V2 = v2, V3 = v3, Normal = normal, Color = defaultColor });
+            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = normal, Color = defaultColor });
         }
 
         public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector4 color)
         {
-            Triangles.Add(new VertexData() { V1 = v1, V2 = v2, V3 = v3, Normal = getNormal(v1, v2, v3), Color = color });
+            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = getNormal(v1, v2, v3), Color = color });
         }
 
         public void writeToFile(string fileName, bool recalcNormals = false)
