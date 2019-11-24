@@ -45,6 +45,7 @@ namespace STLViewer
         private int compList = -1;
         // Compensation data
         private List<FaceData> data;
+        private FaceData[] newData; // = new FaceData[];
         public int numVertex;
         private indiceStruct[] indices;
         public List<Vector3> uniqueVertex = new List<Vector3>();
@@ -231,6 +232,7 @@ namespace STLViewer
                     Console.WriteLine("Gen colored model list data yields " + GL.GetError());
                 }
                 label1.Text = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ")";
+
             }
 
             originalColors = loader.Colored;
@@ -412,12 +414,16 @@ namespace STLViewer
             return  v / v.Length;
         }
 
+        private bool epsEqual(Vector3 Va, Vector3 Vb, float Eps)
+        {
+            return (Math.Abs(Va.X - Vb.X) <= Eps) && (Math.Abs(Va.Y - Vb.Y) <= Eps) & (Math.Abs(Va.Z - Vb.Z) <= Eps);
+        }
+
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F1) // Toggle Help label
             {
                 label2.Visible = !label2.Visible;
-                ReDraw();
             }
 
             if (e.KeyCode == Keys.F12) // Toggle Model Compensation
@@ -426,14 +432,21 @@ namespace STLViewer
 
                 if (trackBar1.Visible && (uniqueVertex.Count == 0))
                 {
+                    if (data.Count > 5000)
+                    {
+                        Cursor.Current = Cursors.WaitCursor;
+                        Application.DoEvents();
+                    }
+
                     for (var i = 0; i < data.Count; ++i)
                     {
+                        if ((i != 0) && ((i % 5000) == 0)) Application.DoEvents();
                         // V1
                         var unique = true;
                         var curVert = data[i].V1;
                         for (var j = 0; j < uniqueVertex.Count; ++j)
                         {
-                            if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
                             {
                                 unique = false;
                                 indices[i].I1 = j;
@@ -451,7 +464,7 @@ namespace STLViewer
                         curVert = data[i].V2;
                         for (var j = 0; j < uniqueVertex.Count; ++j)
                         {
-                            if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
                             {
                                 unique = false;
                                 indices[i].I2 = j;
@@ -468,7 +481,7 @@ namespace STLViewer
                         curVert = data[i].V3;
                         for (var j = 0; j < uniqueVertex.Count; ++j)
                         {
-                            if ((unique) && (Vector3.Equals(uniqueVertex[j], curVert)))
+                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
                             {
                                 unique = false;
                                 indices[i].I3 = j;
@@ -482,34 +495,39 @@ namespace STLViewer
                     }
 
                     Console.WriteLine("num unique vertex " + uniqueVertex.Count);
+                    Cursor.Current = Cursors.Default;
                 }
             }
             if ((e.KeyCode == Keys.S) && (e.Control)) // Save Compensated model
             {
-                //var stlw = new STL_Writer(true);
-                // Save data
-                /*  try
-                  {
-                      var fn = Path.GetFileNameWithoutExtension(currentFile) + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
-                      label1.Text = "Writing to " + fn;                    
-                      stlw.writeToFile(fn, true);
-                  }
-                  catch
-                  {
-                      Console.WriteLine("File Already Exists");
-                      label1.Text = "Failed to write to file";
-                  }*/
+                if (compList != -1)
+                {
+                    var stlw = new STL_Writer(true);
+                    for (int i = 0; i < data.Count; i++)
+                    {
+                        stlw.addFace(newData[i]);
+                    }
+                    try
+                    {
+                        var fn = Path.GetFileNameWithoutExtension(currentFile) + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
+                        label1.Text = "Writing to " + fn;
+                        stlw.writeToFile(fn, true);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("File Already Exists");
+                        label1.Text = "Failed to write to file";
+                    }
+                }
             }
 
             if (e.KeyCode == Keys.C) // Toggle model colors
             {
                 originalColors = !originalColors;
-                ReDraw();
             }
             if (e.KeyCode == Keys.W) // Toggle wireframe
             {
                 wiremode = !wiremode;
-                ReDraw();
             }
             if (e.KeyCode == Keys.Right) // Next model in folder
             {
@@ -520,7 +538,6 @@ namespace STLViewer
                 {
                     currentFile = dirList[currentIndex];
                     loadModel();
-                    ReDraw();
                 }
             }
 
@@ -533,7 +550,6 @@ namespace STLViewer
                 {
                     currentFile = dirList[currentIndex];
                     loadModel();
-                    ReDraw();
                 }
             }
 
@@ -550,24 +566,22 @@ namespace STLViewer
                     {
                         loader = null;
                         currentIndex = -1;
-                        ReDraw();
                     }
                     else if (dirList.Count == 1)
                     {
                         currentIndex = 0;
                         currentFile = dirList[currentIndex];
                         loadModel();
-                        ReDraw();
                     }
                     else
                     {
                         if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                         currentFile = dirList[currentIndex];
                         loadModel();
-                        ReDraw();
                     }
                 }
             }
+            ReDraw();
         }
 
         private void drawBuildVolume()
@@ -695,10 +709,10 @@ namespace STLViewer
             if (trackBar1.Visible)
             {
                 // recomp with new value and reset all data and list
-                var offsetDirection = new Vector3(0.0f, 0.0f, 1.0f);
+                var offsetDirection = new Vector3(1.0f, 0.0f, 0.0f);
                 offsetDirection.Normalize();
-                var offsetLength = trackBar1.Value / 40.0f; // half of overall error
-                label1.Text = offsetLength.ToString("F3");
+                var offsetLength = trackBar1.Value / 40.0f / 2.0f; // half of overall error
+                label1.Text = "Total compensation " + (2*offsetLength).ToString("F3") + "mm";
 
 
                 // compensate for offset, stack normals mult by offset vector
@@ -717,11 +731,11 @@ namespace STLViewer
                 // normalize offset vectors and re-apply final offset              
                 for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
                 {
-                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetLength;
+                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetDirection * offsetLength;
                 }
 
                 // apply offset to data and add to writer
-                var newData = new FaceData[data.Count];
+                newData = new FaceData[data.Count];
                 for (var i = 0; i < data.Count; ++i)
                 {
                     newData[i] = new FaceData
@@ -743,6 +757,7 @@ namespace STLViewer
                 GL.EndList();
                 Console.WriteLine("Gen model compList data yields " + GL.GetError());
             }
+
             ReDraw();
         }
 

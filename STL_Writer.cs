@@ -64,6 +64,10 @@ namespace STLViewer
                 writer.Write(Convert.ToByte(' '));
             }
         }
+        public void addFace(FaceData face)
+        {
+            Triangles.Add(face);
+        }
 
         public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 normal, Vector4 color)
         {
