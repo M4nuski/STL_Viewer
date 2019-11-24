@@ -501,7 +501,7 @@ namespace STLViewer
                     }
                     try
                     {
-                        var fn = Path.GetFileNameWithoutExtension(currentFile) + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ".stl";
+                        var fn = Path.GetFileNameWithoutExtension(currentFile) + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + " x" + (100 * trackBarX.Value / 40).ToString("D3") + "y" + (100 * trackBarY.Value / 40).ToString("D3") + "z" + (100 * trackBarZ.Value / 40).ToString("D3") + ".stl";
                         label1.Text = "Writing to " + fn;
                         stlw.writeToFile(fn, true);
                     }
