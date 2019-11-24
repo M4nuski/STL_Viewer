@@ -315,7 +315,7 @@ namespace STLViewer
                 WindowContext.MakeCurrent(WindowInfo);
                 GL.Viewport(0, 0, panel1.Width, panel1.Height);
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-                GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
+                
                 GL.MatrixMode(MatrixMode.Projection);
                 GL.LoadMatrix(pmap);
                 GL.Translate(0.0f, 0.0f, -pz);
@@ -339,15 +339,24 @@ namespace STLViewer
                 {
                     if ((compList > 0) && trackBarX.Visible)
                     {
-                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-                        GL.CallList(compList);
-                        GL.Disable(EnableCap.DepthTest);
-                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-                        GL.CallList((originalColors) ? colList : defList);
-                        GL.Enable(EnableCap.DepthTest);
+                        if (wiremode)
+                        {
+                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                            GL.CallList(compList);
+                        }
+                        else
+                        {
+                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                            GL.CallList(compList);
+                            GL.Disable(EnableCap.DepthTest);
+                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                            GL.CallList((originalColors) ? colList : defList);
+                            GL.Enable(EnableCap.DepthTest);
+                        }
                     }
                     else
                     {
+                        GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
                         GL.CallList((originalColors) ? colList : defList);
                     }
                 }   
@@ -402,7 +411,7 @@ namespace STLViewer
 
         private bool epsEqual(Vector3 Va, Vector3 Vb, float Eps)
         {
-            return (Math.Abs(Va.X - Vb.X) <= Eps) && (Math.Abs(Va.Y - Vb.Y) <= Eps) & (Math.Abs(Va.Z - Vb.Z) <= Eps);
+            return (Math.Abs(Va.X - Vb.X) <= Eps) && (Math.Abs(Va.Y - Vb.Y) <= Eps) && (Math.Abs(Va.Z - Vb.Z) <= Eps);
         }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
@@ -426,7 +435,11 @@ namespace STLViewer
 
                     for (var i = 0; i < loader.NumTriangle; ++i)
                     {
-                        if ((i != 0) && ((i % 5000) == 0)) Application.DoEvents();
+                        if ((i != 0) && ((i % 5000) == 0))
+                        {
+                            Cursor.Current = Cursors.WaitCursor;
+                            Application.DoEvents();
+                        }
                         // V1
                         var unique = true;
                         var curVert = loader.Triangles[i].V1;
@@ -495,7 +508,7 @@ namespace STLViewer
                     }
                     try
                     {
-                        var fn = Path.GetFileNameWithoutExtension(currentFile) + DateTime.Now.ToString("yy-mm-dd HH-MM-ss") + ".stl";
+                        var fn = Path.GetFileNameWithoutExtension(currentFile) + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + ".stl";
                         label1.Text = "Writing to " + fn;
                         stlw.writeToFile(fn, true);
                     }
@@ -704,20 +717,40 @@ namespace STLViewer
                 // compensate for offset, stack normals mult by offset vector
                 var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
                 for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
+                var uniqueVertexOffsetsLenSq = new List<float>(uniqueVertex.Count);
+                for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsetsLenSq.Add(0.0f);
 
                 for (var i = 0; i < loader.NumTriangle; ++i)
                 {
                     var comp = loader.Triangles[i].Normal * offsetDirection; // face comp
+                    var compLenSq = comp.LengthSquared;
 
-                    uniqueVertexOffsets[faceIndices[i].I1] += comp;
-                    uniqueVertexOffsets[faceIndices[i].I2] += comp;
-                    uniqueVertexOffsets[faceIndices[i].I3] += comp;
-                }
+                    if (compLenSq > uniqueVertexOffsetsLenSq[faceIndices[i].I1])
+                    {
+                        uniqueVertexOffsets[faceIndices[i].I1] = comp;
+                        uniqueVertexOffsetsLenSq[faceIndices[i].I1] = compLenSq;
+                    }
+                    if (compLenSq > uniqueVertexOffsetsLenSq[faceIndices[i].I2])
+                    {
+                        uniqueVertexOffsets[faceIndices[i].I2] = comp;
+                        uniqueVertexOffsetsLenSq[faceIndices[i].I2] = compLenSq;
+                    }
+                    if (compLenSq > uniqueVertexOffsetsLenSq[faceIndices[i].I3])
+                        {
+                        uniqueVertexOffsets[faceIndices[i].I3] = comp;
+                        uniqueVertexOffsetsLenSq[faceIndices[i].I2] = compLenSq;
+                    }
+                // uniqueVertexOffsets[faceIndices[i].I1] += comp;
+                // uniqueVertexOffsets[faceIndices[i].I2] += comp;
+                // uniqueVertexOffsets[faceIndices[i].I3] += comp;
+                // TODO edge case of vertex on 2 sides
+            }
 
                 // normalize offset vectors and re-apply final offset              
                 for (var i = 0; i < uniqueVertexOffsets.Count; ++i)
                 {
-                    uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetDirection * offsetLength;
+                    //  uniqueVertexOffsets[i] = safeNormalize(uniqueVertexOffsets[i]) * offsetDirection * offsetLength;
+                    uniqueVertexOffsets[i] = uniqueVertexOffsets[i] * offsetLength;
                 }
 
                 // apply offset to data and add to writer
