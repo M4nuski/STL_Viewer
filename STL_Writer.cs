@@ -64,14 +64,16 @@ namespace STLViewer
                 writer.Write(Convert.ToByte(' '));
             }
         }
+
+
         public void addFace(FaceData face)
         {
             Triangles.Add(face);
         }
 
-        public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 normal, Vector4 color)
+        public void addFace(Vector3 v1, Vector3 v2, Vector3 v3)
         {
-            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = normal, Color = color} );
+            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = STL_Loader.getNormal(v1, v2, v3), Color = defaultColor });
         }
 
         public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 normal)
@@ -81,7 +83,12 @@ namespace STLViewer
 
         public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector4 color)
         {
-            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = getNormal(v1, v2, v3), Color = color });
+            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = STL_Loader.getNormal(v1, v2, v3), Color = color });
+        }
+
+        public void addFace(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 normal, Vector4 color)
+        {
+            Triangles.Add(new FaceData() { V1 = v1, V2 = v2, V3 = v3, Normal = normal, Color = color} );
         }
 
         public void writeToFile(string fileName, bool recalcNormals = false)
@@ -106,7 +113,7 @@ namespace STLViewer
             // Write Data
             for (var i = 0; i < NumTriangle; i++)
             {
-                if (recalcNormals) Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
+                if (recalcNormals) Triangles[i].Normal = STL_Loader.getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
                 WriteVertexData(binaryWriter, Triangles[i]);
             }
 
@@ -117,24 +124,5 @@ namespace STLViewer
             fileStream.Close();
         }
 
-        public Vector3 getNormal(Vector3 p0, Vector3 p1, Vector3 p2)
-        {
-
-            var v1 = new Vector3(p1.X - p0.X, p1.Y - p0.Y, p1.Z - p0.Z);
-            var v2 = new Vector3(p2.X - p0.X, p2.Y - p0.Y, p2.Z - p0.Z);
-            var res = Vector3.Cross(v1, v2);
-
-            res.Normalize();
-            return res;
-        }
-
-       
-
-
-
-
-
     }
-
-
 }

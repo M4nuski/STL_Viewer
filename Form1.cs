@@ -28,7 +28,6 @@ namespace STLViewer
         public GraphicsContext WindowContext;
         private float[] pmap; // perspective matrix
         private const float _fov = 45.0f;
-        // TODO private float smooth = 0.1f;
 
         //Directory and file content
         private List<string> dirList = new List<string>();
@@ -37,17 +36,15 @@ namespace STLViewer
 
         // current file stl data
         private string currentFile;
-        private STL_Loader loader;
+        private STL_Loader loader = new STL_Loader();
         private BoundingBoxData bbData;
         private Vector3 modelPos;
         private int colList, defList = -1;
 
         private int compList = -1;
         // Compensation data
-        private List<FaceData> data;
-        private FaceData[] newData; // = new FaceData[];
-        public int numVertex;
-        private indiceStruct[] indices;
+        private FaceData[] newData;
+        private indiceStruct[] faceIndices;
         public List<Vector3> uniqueVertex = new List<Vector3>();
 
 
@@ -188,7 +185,7 @@ namespace STLViewer
             Text = Path.GetFullPath(basePath + currentFile);
 
 
-            loader = new STL_Loader(basePath + currentFile);
+            loader.loadFile(basePath + currentFile);
             bbData = loader.getBondingBox();
 
             // center model on platform
@@ -238,25 +235,14 @@ namespace STLViewer
             originalColors = loader.Colored;
             wiremode = false;
             Console.WriteLine("model loaded in " + (perfCount.ElapsedMilliseconds - loadStart));
-            trackBar1.Hide();
-            if (data != null)
-            {
-                data.Clear();
-            }
-            else
-            {
-                data = new List<FaceData>();
-            }
-
+            trackBarX.Hide();
 
             if (loader?.NumTriangle > 0)
             {
-                for (var i = 0; i < loader?.NumTriangle; i++) data.Add(loader.Triangles[i]);
                 // prep data for comp
-                numVertex = data.Count * 3;
-                indices = new indiceStruct[data.Count];
+                faceIndices = new indiceStruct[loader.NumTriangle];
                 uniqueVertex = new List<Vector3>();
-                Console.WriteLine("num vertex " + numVertex);
+                Console.WriteLine("num vertex " + loader.NumTriangle * 3);
             }  
         }
 
@@ -351,7 +337,7 @@ namespace STLViewer
 
                 if (loader?.NumTriangle > 0)
                 {
-                    if ((compList > 0) && trackBar1.Visible)
+                    if ((compList > 0) && trackBarX.Visible)
                     {
                         GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
                         GL.CallList(compList);
@@ -428,69 +414,69 @@ namespace STLViewer
 
             if (e.KeyCode == Keys.F12) // Toggle Model Compensation
             {
-                trackBar1.Visible = !trackBar1.Visible;
+                trackBarX.Visible = !trackBarX.Visible;
 
-                if (trackBar1.Visible && (uniqueVertex.Count == 0))
+                if (trackBarX.Visible && (uniqueVertex.Count == 0))
                 {
-                    if (data.Count > 5000)
+                    if (loader.NumTriangle > 5000)
                     {
                         Cursor.Current = Cursors.WaitCursor;
                         Application.DoEvents();
                     }
 
-                    for (var i = 0; i < data.Count; ++i)
+                    for (var i = 0; i < loader.NumTriangle; ++i)
                     {
                         if ((i != 0) && ((i % 5000) == 0)) Application.DoEvents();
                         // V1
                         var unique = true;
-                        var curVert = data[i].V1;
+                        var curVert = loader.Triangles[i].V1;
                         for (var j = 0; j < uniqueVertex.Count; ++j)
                         {
                             if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
                             {
                                 unique = false;
-                                indices[i].I1 = j;
+                                faceIndices[i].I1 = j;
                             }
                         }
                         if (unique)
                         {
                             uniqueVertex.Add(curVert);
-                            indices[i].I1 = uniqueVertex.Count - 1;
+                            faceIndices[i].I1 = uniqueVertex.Count - 1;
                         }
 
 
                         // V2
                         unique = true;
-                        curVert = data[i].V2;
+                        curVert = loader.Triangles[i].V2;
                         for (var j = 0; j < uniqueVertex.Count; ++j)
                         {
                             if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
                             {
                                 unique = false;
-                                indices[i].I2 = j;
+                                faceIndices[i].I2 = j;
                             }
                         }
                         if (unique)
                         {
                             uniqueVertex.Add(curVert);
-                            indices[i].I2 = uniqueVertex.Count - 1;
+                            faceIndices[i].I2 = uniqueVertex.Count - 1;
                         }
 
                         // V3
                         unique = true;
-                        curVert = data[i].V3;
+                        curVert = loader.Triangles[i].V3;
                         for (var j = 0; j < uniqueVertex.Count; ++j)
                         {
                             if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
                             {
                                 unique = false;
-                                indices[i].I3 = j;
+                                faceIndices[i].I3 = j;
                             }
                         }
                         if (unique)
                         {
                             uniqueVertex.Add(curVert);
-                            indices[i].I3 = uniqueVertex.Count - 1;
+                            faceIndices[i].I3 = uniqueVertex.Count - 1;
                         }
                     }
 
@@ -503,7 +489,7 @@ namespace STLViewer
                 if (compList != -1)
                 {
                     var stlw = new STL_Writer(true);
-                    for (int i = 0; i < data.Count; i++)
+                    for (int i = 0; i < loader.NumTriangle; i++)
                     {
                         stlw.addFace(newData[i]);
                     }
@@ -531,7 +517,7 @@ namespace STLViewer
             }
             if (e.KeyCode == Keys.Right) // Next model in folder
             {
-                trackBar1.Hide();
+                trackBarX.Hide();
                 currentIndex++;
                 if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                 else if (dirList.Count > 0)
@@ -543,7 +529,7 @@ namespace STLViewer
 
             if (e.KeyCode == Keys.Left) // Previous model in folder
             {
-                trackBar1.Hide();
+                trackBarX.Hide();
                 currentIndex--;
                 if (currentIndex < 0) currentIndex = 0;
                 else if (dirList.Count > 0)
@@ -555,7 +541,7 @@ namespace STLViewer
 
             if (e.KeyCode == Keys.Delete)  // Delete model file (after confirmation dialog)
             {
-                trackBar1.Hide();
+                trackBarX.Hide();
                 if (MessageBox.Show(this, "Delete current file ?", "Warning", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
                     RecyclingBin.MoveHere(basePath + currentFile);
@@ -706,12 +692,12 @@ namespace STLViewer
 
         private void trackBar1_ValueChanged(object sender, EventArgs e)
         {
-            if (trackBar1.Visible)
+            if (trackBarX.Visible)
             {
                 // recomp with new value and reset all data and list
                 var offsetDirection = new Vector3(1.0f, 0.0f, 0.0f);
                 offsetDirection.Normalize();
-                var offsetLength = trackBar1.Value / 40.0f / 2.0f; // half of overall error
+                var offsetLength = trackBarX.Value / 40.0f / 2.0f; // half of overall error
                 label1.Text = "Total compensation " + (2*offsetLength).ToString("F3") + "mm";
 
 
@@ -719,13 +705,13 @@ namespace STLViewer
                 var uniqueVertexOffsets = new List<Vector3>(uniqueVertex.Count);
                 for (var i = 0; i < uniqueVertex.Count; ++i) uniqueVertexOffsets.Add(new Vector3(0.0f, 0.0f, 0.0f));
 
-                for (var i = 0; i < data.Count; ++i)
+                for (var i = 0; i < loader.NumTriangle; ++i)
                 {
-                    var comp = data[i].Normal * offsetDirection; // face comp
+                    var comp = loader.Triangles[i].Normal * offsetDirection; // face comp
 
-                    uniqueVertexOffsets[indices[i].I1] += comp;
-                    uniqueVertexOffsets[indices[i].I2] += comp;
-                    uniqueVertexOffsets[indices[i].I3] += comp;
+                    uniqueVertexOffsets[faceIndices[i].I1] += comp;
+                    uniqueVertexOffsets[faceIndices[i].I2] += comp;
+                    uniqueVertexOffsets[faceIndices[i].I3] += comp;
                 }
 
                 // normalize offset vectors and re-apply final offset              
@@ -735,16 +721,16 @@ namespace STLViewer
                 }
 
                 // apply offset to data and add to writer
-                newData = new FaceData[data.Count];
-                for (var i = 0; i < data.Count; ++i)
+                newData = new FaceData[loader.NumTriangle];
+                for (var i = 0; i < loader.NumTriangle; ++i)
                 {
                     newData[i] = new FaceData
                     {
-                        V1 = data[i].V1 + uniqueVertexOffsets[indices[i].I1],
-                        V2 = data[i].V2 + uniqueVertexOffsets[indices[i].I2],
-                        V3 = data[i].V3 + uniqueVertexOffsets[indices[i].I3],
-                        Normal = data[i].Normal,
-                        Color = data[i].Color
+                        V1 = loader.Triangles[i].V1 + uniqueVertexOffsets[faceIndices[i].I1],
+                        V2 = loader.Triangles[i].V2 + uniqueVertexOffsets[faceIndices[i].I2],
+                        V3 = loader.Triangles[i].V3 + uniqueVertexOffsets[faceIndices[i].I3],
+                        Normal = loader.Triangles[i].Normal,
+                        Color = loader.Triangles[i].Color
                     };
                 }
 
@@ -753,7 +739,7 @@ namespace STLViewer
 
                 compList = GL.GenLists(1);
                 GL.NewList(compList, ListMode.Compile);
-                drawModel(!false, data.Count, newData);
+                drawModel(!false, (int)loader.NumTriangle, newData);
                 GL.EndList();
                 Console.WriteLine("Gen model compList data yields " + GL.GetError());
             }

@@ -20,10 +20,10 @@ namespace STLViewer
 
     class STL_Loader
     {
-        public readonly UInt32 NumTriangle;
-        public readonly FaceData[] Triangles;
-        public readonly bool Colored = false;
-        public readonly string Type;
+        public UInt32 NumTriangle;
+        public FaceData[] Triangles;
+        public bool Colored;
+        public string Type;
 
         private static Vector3 ReadVector3(BinaryReader reader)
         {
@@ -96,11 +96,19 @@ namespace STLViewer
             return result;
         }
 
+        public STL_Loader()
+        {
+            Colored = false;
+            Type = "";
+            NumTriangle = 0;
+        }
 
-        public STL_Loader(string fileName)
+        public void loadFile(string fileName)
         {
             char[] spaceSeperator = { ' ' };
+            Colored = false;
             Type = "";
+            NumTriangle = 0;
 
             if (File.Exists(fileName))
             {
@@ -291,7 +299,6 @@ namespace STLViewer
                     }
 
                     if (normalsRecalculated) Console.WriteLine("Normals recalculated");
-                    //TODO add smoothing
 
                 }
                 catch (Exception ex)
@@ -310,20 +317,14 @@ namespace STLViewer
             }
         }
 
-        public Vector3 getNormal(Vector3 p0, Vector3 p1, Vector3 p2)
+        public static Vector3 getNormal(Vector3 p0, Vector3 p1, Vector3 p2)
         {
-
             var v1 = new Vector3(p1.X - p0.X, p1.Y - p0.Y, p1.Z - p0.Z);
             var v2 = new Vector3(p2.X - p0.X, p2.Y - p0.Y, p2.Z - p0.Z);
             var res = Vector3.Cross(v1, v2);
 
             res.Normalize();
             return res;
-        }
-
-        public void smoothNormals(float limit)
-        {
-            // TODO
         }
 
         public BoundingBoxData getBondingBox()
@@ -366,11 +367,6 @@ namespace STLViewer
 
             return res;
         }
-
-
-
-
-
 
     }
 
