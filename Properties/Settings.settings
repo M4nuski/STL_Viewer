@@ -20,6 +20,15 @@
     <Setting Name="defaultColor_B" Type="System.Single" Scope="User">
       <Value Profile="(Default)">0.75</Value>
     </Setting>
+    <Setting Name="backColor_R" Type="System.Single" Scope="User">
+      <Value Profile="(Default)">0.14</Value>
+    </Setting>
+    <Setting Name="backColor_G" Type="System.Single" Scope="User">
+      <Value Profile="(Default)">0.41</Value>
+    </Setting>
+    <Setting Name="backColor_B" Type="System.Single" Scope="User">
+      <Value Profile="(Default)">0.86</Value>
+    </Setting>
     <Setting Name="defaultColor_A" Type="System.Single" Scope="User">
       <Value Profile="(Default)">1</Value>
     </Setting>

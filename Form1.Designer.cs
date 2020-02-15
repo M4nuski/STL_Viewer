@@ -39,6 +39,8 @@
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
+            this.backgroundWorker_UniqueVertex = new System.ComponentModel.BackgroundWorker();
+            this.backgroundWorker_Outline = new System.ComponentModel.BackgroundWorker();
             this.renderPanel.SuspendLayout();
             this.compCtrlPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarX)).BeginInit();
@@ -154,7 +156,7 @@
             this.label2.ForeColor = System.Drawing.Color.Black;
             this.label2.Location = new System.Drawing.Point(12, 9);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(290, 150);
+            this.label2.Size = new System.Drawing.Size(295, 187);
             this.label2.TabIndex = 1;
             this.label2.Text = resources.GetString("label2.Text");
             this.label2.Visible = false;
@@ -171,6 +173,22 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "Drag and drop file to load, F1 for help";
             // 
+            // backgroundWorker_UniqueVertex
+            // 
+            this.backgroundWorker_UniqueVertex.WorkerReportsProgress = true;
+            this.backgroundWorker_UniqueVertex.WorkerSupportsCancellation = true;
+            this.backgroundWorker_UniqueVertex.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker_Uniques_DoWork);
+            this.backgroundWorker_UniqueVertex.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.backgroundWorker_Uniques_ProgressChanged);
+            this.backgroundWorker_UniqueVertex.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorker_Uniques_RunWorkerCompleted);
+            // 
+            // backgroundWorker_Outline
+            // 
+            this.backgroundWorker_Outline.WorkerReportsProgress = true;
+            this.backgroundWorker_Outline.WorkerSupportsCancellation = true;
+            this.backgroundWorker_Outline.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker_Outline_DoWork);
+            this.backgroundWorker_Outline.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.backgroundWorker_Outline_ProgressChanged);
+            this.backgroundWorker_Outline.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorker_Outline_RunWorkerCompleted);
+            // 
             // Form1
             // 
             this.AllowDrop = true;
@@ -180,7 +198,7 @@
             this.Controls.Add(this.renderPanel);
             this.KeyPreview = true;
             this.Name = "Form1";
-            this.Text = "STL Viewer v1.0";
+            this.Text = "STL Viewer v1.1";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
@@ -212,6 +230,8 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TrackBar trackBarZ;
         private System.Windows.Forms.TrackBar trackBarY;
+        private System.ComponentModel.BackgroundWorker backgroundWorker_UniqueVertex;
+        private System.ComponentModel.BackgroundWorker backgroundWorker_Outline;
     }
 }
 

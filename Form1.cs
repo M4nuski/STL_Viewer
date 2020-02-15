@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 using System.Windows.Forms;
+using System.Drawing;
 
 using System.IO;
 using Shell32;
@@ -11,6 +11,8 @@ using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Platform;
+using System.ComponentModel;
+using System.Threading;
 
 namespace STLViewer
 {
@@ -39,14 +41,27 @@ namespace STLViewer
         private STL_Loader loader = new STL_Loader();
         private BoundingBoxData bbData;
         private Vector3 modelPos;
-        private int colList, defList = -1;
 
-        private int compList = -1;
+        private int colList = -1; // color list
+        private int defList = -1; // default list
+
+        private int compList = -1; // compensated list
+        private int outlineList = -1; // outline list
+        private int outlineMode = 1; // 1 outline and mesh, 2 mesh only, 3 outline only
+        private string status = "";
+
         // Compensation data
         private FaceData[] newData;
         private indiceStruct[] faceIndices;
         public List<Vector3> uniqueVertex = new List<Vector3>();
 
+        private bool UniqueVerticesReady = false;
+        private bool OutlineReady = false;
+        private long loadStart = 0;
+        private AutoResetEvent _BGW_UV_resetEvent = new AutoResetEvent(true);
+        private AutoResetEvent _BGW_EF_resetEvent = new AutoResetEvent(true);
+
+        public List<edgeStruct> edges = new List<edgeStruct>();
 
         // user inputs
         private float px;// = 0.0f;
@@ -66,6 +81,8 @@ namespace STLViewer
 
         private bool originalColors = true;
         private Vector4 defaultColor;
+        private Color backColor;
+        private Vector4 edgeColor = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 
         private bool wiremode = false;
 
@@ -77,10 +94,10 @@ namespace STLViewer
             try
             {
                 defaultColor = new Vector4(
-                    (float)Properties.Settings.Default["defaultColor_R"],
-                    (float)Properties.Settings.Default["defaultColor_G"],
-                    (float)Properties.Settings.Default["defaultColor_B"],
-                    (float)Properties.Settings.Default["defaultColor_A"]
+                    Properties.Settings.Default.defaultColor_R,
+                    Properties.Settings.Default.defaultColor_G,
+                    Properties.Settings.Default.defaultColor_B,
+                    Properties.Settings.Default.defaultColor_A
                 );
             }
             catch (Exception ex)
@@ -88,6 +105,25 @@ namespace STLViewer
                 defaultColor = new Vector4(0.75f, 0.75f, 0.75f, 1.0f);
                 Console.WriteLine("error reading default color assembly properties: " + ex.Message);
             }
+
+            try
+            {
+                backColor = Color.FromArgb(
+                    (int)(Properties.Settings.Default.backColor_R * 255),
+                    (int)(Properties.Settings.Default.backColor_G * 255),
+                    (int)(Properties.Settings.Default.backColor_B * 255)
+                );
+            }
+            catch (Exception ex)
+            {
+                backColor = Color.FromArgb(35, 105, 219);
+                Console.WriteLine("error reading background color assembly properties: " + ex.Message);
+            }
+
+            label1.BackColor = backColor;
+            trackBarX.BackColor = backColor;
+            trackBarY.BackColor = backColor;
+            trackBarZ.BackColor = backColor;
 
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
@@ -126,7 +162,7 @@ namespace STLViewer
             GL.Enable(EnableCap.DepthTest);
 
             GL.Disable(EnableCap.CullFace);
-            GL.ClearColor(35.0f / 255.0f, 105.0f / 255.0f, 219.0f / 255.0f, 1.0f);
+            GL.ClearColor(backColor);
 
             GL.Light(LightName.Light0, LightParameter.Ambient, new Color4(0.15f, 0.15f, 0.15f, 1.0f));
             GL.Light(LightName.Light0, LightParameter.Diffuse, new Color4(0.85f, 0.85f, 0.85f, 1.0f));
@@ -180,9 +216,10 @@ namespace STLViewer
         private void loadModel()
         {
             Console.WriteLine("loading " + currentFile);
-            var loadStart = perfCount.ElapsedMilliseconds;
+            loadStart = perfCount.ElapsedMilliseconds;
             Text = Path.GetFullPath(basePath + currentFile);
-
+            CancelBGW();
+            outlineMode = 1;
 
             loader.loadFile(basePath + currentFile);
             bbData = loader.getBondingBox();
@@ -201,22 +238,24 @@ namespace STLViewer
 
             py = (bbData.maxY - bbData.minY) / -2.0f;
             px = 0;
-            // rx = 0;
-            // ry = 0;
 
             // prepare model data
             if (loader?.NumTriangle > 0)
             {
-                GL.DeleteLists(colList, 1);
-                GL.DeleteLists(defList, 1);
-                GL.DeleteLists(compList, 1);
+                if (colList != -1) GL.DeleteLists(colList, 1);
+                if (defList != -1) GL.DeleteLists(defList, 1);
+                if (compList != -1) GL.DeleteLists(compList, 1);
+                if (outlineList != -1) GL.DeleteLists(outlineList, 1);
                 compList = -1;
+                defList = -1;
+                compList = -1;
+                outlineList = -1;
 
                 colList = GL.GenLists(1);
                 GL.NewList(colList, ListMode.Compile);
                 drawModel(!loader.Colored, (int)loader.NumTriangle, loader.Triangles);
                 GL.EndList();
-                Console.WriteLine("Gen model list data yields " + GL.GetError());
+                Console.WriteLine("Gen default model list data yields " + GL.GetError());
 
                 if (!loader.Colored) defList = colList;
                 else
@@ -227,7 +266,8 @@ namespace STLViewer
                     GL.EndList();
                     Console.WriteLine("Gen colored model list data yields " + GL.GetError());
                 }
-                label1.Text = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ")";
+                status = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ") ";
+                label1.Text = status;
 
             }
 
@@ -238,10 +278,17 @@ namespace STLViewer
 
             if (loader?.NumTriangle > 0)
             {
+                Console.WriteLine("num vertex " + loader.NumTriangle * 3);
+
                 // prep data for comp
                 faceIndices = new indiceStruct[loader.NumTriangle];
-                uniqueVertex = new List<Vector3>();
-                Console.WriteLine("num vertex " + loader.NumTriangle * 3);
+                uniqueVertex.Clear();
+                UniqueVerticesReady = false;
+                // start checking for unique vertices
+                _BGW_UV_resetEvent.Reset();
+                backgroundWorker_UniqueVertex.RunWorkerAsync();
+
+                ReDraw();
             }  
         }
 
@@ -351,12 +398,34 @@ namespace STLViewer
                             GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
                             GL.CallList((originalColors) ? colList : defList);
                             GL.Enable(EnableCap.DepthTest);
+
+                            if (OutlineReady)
+                            {
+                                GL.LineWidth(3.0f);
+                                GL.CallList(outlineList);
+                                GL.LineWidth(1.0f);
+                            }
                         }
                     }
                     else
                     {
-                        GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
-                        GL.CallList((originalColors) ? colList : defList);
+                        // 1 outline and mesh, 2 mesh only, 3 outline only
+                        if (outlineMode != 2)
+                        {
+                            if (OutlineReady)
+                            {
+                                GL.LineWidth(3.0f);
+                                GL.CallList(outlineList);
+                                GL.LineWidth(1.0f);
+                            }
+                        }
+                        if (outlineMode != 3)
+                        {                      
+                            GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
+                            GL.CallList((originalColors) ? colList : defList);
+                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                        }
+
                     }
                 }   
 
@@ -398,6 +467,15 @@ namespace STLViewer
             public int I2; // ref V2 of face
             public int I3; // ref V3 of face
         }
+        public class edgeStruct
+        {
+            public bool done = false;
+            public int I1; // ref V1 of edge
+            public int I2; // ref V2 of edge
+
+            public Vector3 N1; // normal of face 1
+            public Vector3 N2; // normal of face 2
+        }
 
         private Vector3 safeNormalize(Vector3 v)
         {
@@ -420,75 +498,13 @@ namespace STLViewer
 
             if (e.KeyCode == Keys.F12) // Toggle Model Compensation
             {
-                compCtrlPanel.Visible = !compCtrlPanel.Visible;
-
-                if (compCtrlPanel.Visible && (uniqueVertex.Count == 0))
+                if (!compCtrlPanel.Visible && UniqueVerticesReady)
                 {
-                    for (var i = 0; i < loader.NumTriangle; ++i)
-                    {
-                        if ((loader.NumTriangle > 5000) && ((i % 5000) == 0))
-                        {
-                            label1.Text = $"Analysing model {(int)(100 * i / loader.NumTriangle)}%";
-                            Application.DoEvents();
-                            Cursor.Current = Cursors.WaitCursor;
-                        }
-                        // V1
-                        var unique = true;
-                        var curVert = loader.Triangles[i].V1;
-                        for (var j = 0; j < uniqueVertex.Count; ++j)
-                        {
-                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
-                            {
-                                unique = false;
-                                faceIndices[i].I1 = j;
-                            }
-                        }
-                        if (unique)
-                        {
-                            uniqueVertex.Add(curVert);
-                            faceIndices[i].I1 = uniqueVertex.Count - 1;
-                        }
-
-
-                        // V2
-                        unique = true;
-                        curVert = loader.Triangles[i].V2;
-                        for (var j = 0; j < uniqueVertex.Count; ++j)
-                        {
-                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
-                            {
-                                unique = false;
-                                faceIndices[i].I2 = j;
-                            }
-                        }
-                        if (unique)
-                        {
-                            uniqueVertex.Add(curVert);
-                            faceIndices[i].I2 = uniqueVertex.Count - 1;
-                        }
-
-                        // V3
-                        unique = true;
-                        curVert = loader.Triangles[i].V3;
-                        for (var j = 0; j < uniqueVertex.Count; ++j)
-                        {
-                            if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
-                            {
-                                unique = false;
-                                faceIndices[i].I3 = j;
-                            }
-                        }
-                        if (unique)
-                        {
-                            uniqueVertex.Add(curVert);
-                            faceIndices[i].I3 = uniqueVertex.Count - 1;
-                        }
-                    }
-
-                    label1.Text = $"Found {uniqueVertex.Count} unique vertex out of {loader.NumTriangle*3}"; 
-                    Console.WriteLine("num unique vertex " + uniqueVertex.Count);
-                    Cursor.Current = Cursors.Default;
+                    compCtrlPanel.Visible = true;
                 }
+                else compCtrlPanel.Visible = false;
+
+
             }
             if ((e.KeyCode == Keys.S) && (e.Control)) // Save Compensated model
             {
@@ -516,6 +532,11 @@ namespace STLViewer
             if (e.KeyCode == Keys.C) // Toggle model colors
             {
                 originalColors = !originalColors;
+            }
+            if (e.KeyCode == Keys.O) // Toggle model colors
+            {
+                ++outlineMode;
+                if (outlineMode > 3) outlineMode = 1;
             }
             if (e.KeyCode == Keys.W) // Toggle wireframe
             {
@@ -678,6 +699,15 @@ namespace STLViewer
             resetSizes();
         }
 
+        private void Form1_DragEnter(object sender, DragEventArgs e)
+        {
+            var fna = (string[])e.Data.GetData("FileNameW");
+            var newName = "";
+            if ((fna != null) && (fna.Length > 0)) newName = fna[0];
+            if (Path.GetExtension(newName) == ".stl") e.Effect = DragDropEffects.Copy;
+        }
+
+
         private void Form1_DragDrop(object sender, DragEventArgs e)
         {
             var fna = (string[])e.Data.GetData("FileNameW");
@@ -695,6 +725,7 @@ namespace STLViewer
             GL.DeleteLists(colList, 1);
             GL.DeleteLists(defList, 1);
             GL.DeleteLists(compList, 1);
+            GL.DeleteLists(outlineList, 1);
         }
 
         private void trackBar1_ValueChanged(object sender, EventArgs e)
@@ -820,12 +851,305 @@ namespace STLViewer
             ReDraw();
         }
 
-        private void Form1_DragEnter(object sender, DragEventArgs e)
+
+        private void genOutlineList()
         {
-            var fna = (string[])e.Data.GetData("FileNameW");
-            var newName = "";
-            if ((fna != null) && (fna.Length > 0)) newName = fna[0];
-            if (Path.GetExtension(newName) == ".stl") e.Effect = DragDropEffects.Copy;
+            GL.DeleteLists(outlineList, 1);
+
+            outlineList = GL.GenLists(1);
+            GL.NewList(outlineList, ListMode.Compile);
+
+
+            GL.Begin(PrimitiveType.Lines);
+            for (var i = 0; i < edges.Count; i++)
+            {
+                if (Math.Abs(Vector3.Dot(edges[i].N1, edges[i].N2)) < 0.8f)
+                {
+                    GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, edgeColor);
+                    GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, edgeColor);
+
+                    var offset = (edges[i].N2 + edges[i].N1);
+                    offset = offset * 0.005f;
+
+                    GL.Vertex3(uniqueVertex[edges[i].I1] + offset);
+                    GL.Vertex3(uniqueVertex[edges[i].I2] + offset);
+
+                }
+            }
+
+            GL.End();
+            GL.EndList();
+
+            Console.WriteLine("Gen outlines list data yields " + GL.GetError());
+        }
+
+        private void backgroundWorker_Uniques_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
+        {
+            if (e.Cancelled == true)
+            {
+                label1.Text = status + " Analyze Canceled";
+                UniqueVerticesReady = false;
+            }
+            else if (e.Error != null)
+            {
+                label1.Text = status + " Vertex analyze Error: " + e.Error.Message;
+                UniqueVerticesReady = false;
+            }
+            else
+            {
+                label1.Text = status + $"Found {uniqueVertex.Count} unique vertex out of {loader.NumTriangle * 3}";
+                Console.WriteLine("num unique vertex " + uniqueVertex.Count);
+                Console.WriteLine("model analysed in " + (perfCount.ElapsedMilliseconds - loadStart));
+                UniqueVerticesReady = true;
+                ReDraw();
+
+                // start edge finding
+                edges.Clear();
+                OutlineReady = false;
+                _BGW_EF_resetEvent.Reset();
+                backgroundWorker_Outline.RunWorkerAsync();
+            }
+        }
+
+        private void backgroundWorker_Uniques_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            label1.Text = status + $"Analysing model {e.ProgressPercentage}%";
+        }
+
+        private void backgroundWorker_Uniques_DoWork(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker thisWorker = sender as BackgroundWorker;
+            var slice = (int)Math.Round(8000 / Math.Log(loader.NumTriangle, 2));
+            if (slice < 10) slice = 10;
+            Console.WriteLine("Slice size: " + slice);
+            loadStart = perfCount.ElapsedMilliseconds;
+
+            for (var i = 0; i < loader.NumTriangle; ++i)
+            {
+                
+                // Report Progress
+                if ((loader.NumTriangle > slice) && ((i % slice) == 0))
+                {
+                    thisWorker.ReportProgress(100 * i / (int)loader.NumTriangle);
+
+                    // Check for cancellation
+                    if (thisWorker.CancellationPending == true)
+                    {
+                        e.Cancel = true;
+                        break;
+                    }
+                }
+
+                // V1
+                var unique = true;
+                var curVert = loader.Triangles[i].V1;
+                for (var j = 0; j < uniqueVertex.Count; ++j)
+                {
+                    if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                    {
+                        unique = false;
+                        faceIndices[i].I1 = j;
+                        break;
+                    }
+                }
+                if (unique)
+                {
+                    uniqueVertex.Add(curVert);
+                    faceIndices[i].I1 = uniqueVertex.Count - 1;
+                }
+
+
+                // V2
+                unique = true;
+                curVert = loader.Triangles[i].V2;
+                for (var j = 0; j < uniqueVertex.Count; ++j)
+                {
+                    if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                    {
+                        unique = false;
+                        faceIndices[i].I2 = j;
+                        break;
+                    }
+                }
+                if (unique)
+                {
+                    uniqueVertex.Add(curVert);
+                    faceIndices[i].I2 = uniqueVertex.Count - 1;
+                }
+
+                // V3
+                unique = true;
+                curVert = loader.Triangles[i].V3;
+                for (var j = 0; j < uniqueVertex.Count; ++j)
+                {
+                    if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                    {
+                        unique = false;
+                        faceIndices[i].I3 = j;
+                        break;
+                    }
+                }
+                if (unique)
+                {
+                    uniqueVertex.Add(curVert);
+                    faceIndices[i].I3 = uniqueVertex.Count - 1;
+                }
+            }
+
+
+            _BGW_UV_resetEvent.Set();
+        }
+
+        private void backgroundWorker_Outline_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        {
+            BackgroundWorker thisWorker = sender as BackgroundWorker;
+            var slice = (int)Math.Round(8000 / Math.Log(loader.NumTriangle, 2));
+            if (slice < 10) slice = 10;
+            Console.WriteLine("Slice size: " + slice);
+            loadStart = perfCount.ElapsedMilliseconds;
+
+            for (var i = 0; i < loader.NumTriangle; ++i)
+            {
+
+                // Report Progress
+                if ((loader.NumTriangle > slice) && ((i % slice) == 0))
+                {
+                    thisWorker.ReportProgress(100 * i / (int)loader.NumTriangle);
+
+                    // Check for cancellation
+                    if (thisWorker.CancellationPending == true)
+                    {
+                        e.Cancel = true;
+                        break;
+                    }
+                }
+
+
+                // find all corresponding edges
+                // E1
+                // if not in edges list, add to list, assign first normal
+                //if in list assign second normal
+
+                var unique = true;
+                for (int j = 0; j < edges.Count; j++) if (!edges[j].done)
+                {
+                    if (((edges[j].I1 == faceIndices[i].I1) && (edges[j].I2 == faceIndices[i].I2)) ||
+                        ((edges[j].I1 == faceIndices[i].I2) && (edges[j].I2 == faceIndices[i].I1))) {
+                        unique = false;
+                        edges[j].N2 = loader.Triangles[i].Normal;
+                        edges[j].done = true;
+                        break;
+                    }
+                }
+                if (unique)
+                {
+                    edges.Add(new edgeStruct() {
+                        I1 = faceIndices[i].I1,
+                        I2 = faceIndices[i].I2,
+                        N1 = loader.Triangles[i].Normal
+                     }
+                    );
+                }
+
+
+                unique = true;
+                for (int j = 0; j < edges.Count; j++) if (!edges[j].done)
+                    {
+                    if (((edges[j].I1 == faceIndices[i].I2) && (edges[j].I2 == faceIndices[i].I3)) ||
+                        ((edges[j].I1 == faceIndices[i].I3) && (edges[j].I2 == faceIndices[i].I2)))
+                    {
+                        unique = false;
+                        edges[j].N2 = loader.Triangles[i].Normal;
+                        edges[j].done = true;
+                        break;
+                    }
+                }
+                if (unique)
+                {
+                    edges.Add(new edgeStruct()
+                    {
+                        I1 = faceIndices[i].I2,
+                        I2 = faceIndices[i].I3,
+                        N1 = loader.Triangles[i].Normal
+                    }
+                    );
+                }
+
+                unique = true;
+                for (int j = 0; j < edges.Count; j++) if (!edges[j].done)
+                    {
+                    if (((edges[j].I1 == faceIndices[i].I3) && (edges[j].I2 == faceIndices[i].I1)) ||
+                        ((edges[j].I1 == faceIndices[i].I1) && (edges[j].I2 == faceIndices[i].I3)))
+                    {
+                        unique = false;
+                        edges[j].N2 = loader.Triangles[i].Normal;
+                        edges[j].done = true;
+                        break;
+                    }
+                }
+                if (unique)
+                {
+                    edges.Add(new edgeStruct()
+                    {
+                        I1 = faceIndices[i].I3,
+                        I2 = faceIndices[i].I1,
+                        N1 = loader.Triangles[i].Normal
+                    }
+                    );
+                }
+            }
+
+            _BGW_EF_resetEvent.Set();
+        }
+
+        private void backgroundWorker_Outline_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
+        {
+            if (e.Cancelled == true)
+            {
+                label1.Text = status + "Outline Canceled!";
+                OutlineReady = false;
+            }
+            else if (e.Error != null)
+            {
+                label1.Text = status + "Outline Error: " + e.Error.Message;
+                OutlineReady = false;
+            }
+            else
+            {
+                Console.WriteLine("num edges " + edges.Count);
+                Console.WriteLine("edge found in " + (perfCount.ElapsedMilliseconds - loadStart));
+                label1.Text = status;
+
+                // generate outline list
+                genOutlineList();
+                OutlineReady = true;
+
+                ReDraw();
+            }
+        }
+
+        private void backgroundWorker_Outline_ProgressChanged(object sender, System.ComponentModel.ProgressChangedEventArgs e)
+        {
+            label1.Text = status + $"Generating outline {e.ProgressPercentage}%";
+        }
+
+
+        private void CancelBGW()
+        {
+            if ( (backgroundWorker_Outline.IsBusy) && (backgroundWorker_Outline.WorkerSupportsCancellation == true))
+            {
+                backgroundWorker_Outline.CancelAsync();
+                _BGW_EF_resetEvent.WaitOne();
+                OutlineReady = false;
+                Application.DoEvents();
+            }
+            if ( (backgroundWorker_UniqueVertex.IsBusy) && (backgroundWorker_UniqueVertex.WorkerSupportsCancellation == true))
+            {
+                backgroundWorker_UniqueVertex.CancelAsync();
+                _BGW_UV_resetEvent.WaitOne();
+                UniqueVerticesReady = false;
+                Application.DoEvents();
+            }
         }
     }
 }
