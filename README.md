@@ -18,10 +18,11 @@ Viewer for 3D STL files, classic image viewer controls, OpenGL
 * Display a wireframe build volume
 * Auto center model in view
 * Left and Right arrows for Previous and Next model in folder
+* Ctrl-R to rename file
 * C to toggle default color vs model colors
 * W to toggle wireframe mode
 * Delete to move file to trash
-* F12 to active model compensation controls (Ctrl+S to save)
+* F12 to activate model compensation controls (Ctrl+S to save)
 
 ## Settings
 Build volume dimensions and default color can be set in the ".config" file.
@@ -30,5 +31,5 @@ Build volume dimensions and default color can be set in the ".config" file.
 * Base branch uses OpenTK OpenGL 2.0 immediate mode and compiled lists: context takes about a second to initialize.
 * Parallel branches to test faster and more modern contexts
   * 4.x OpenGL with shaders and VBO
-  * WPF native 3D rendering context etc
+  * WPF native 3D rendering context
  
