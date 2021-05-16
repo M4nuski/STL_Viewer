@@ -83,17 +83,15 @@ namespace STLViewer
 
         private static float convertFloatString(string fs)
         {
-            float result;
             try
             {
-                result = Convert.ToSingle(fs);
+                return float.Parse(fs, System.Globalization.NumberStyles.Float, System.Globalization.NumberFormatInfo.InvariantInfo);
             }
             catch (Exception)
             {
-                result = 0.0f;
                 Console.WriteLine("error converting string " + fs);
+                return 0.0f;
             }
-            return result;
         }
 
         public STL_Loader()

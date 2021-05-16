@@ -14,7 +14,7 @@ using OpenTK.Platform;
 using System.ComponentModel;
 using System.Threading;
 
-namespace STLViewer
+namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists, single BGW for UV and for EF
 {
     public partial class Form1 : Form
     {
@@ -85,6 +85,8 @@ namespace STLViewer
         private Vector4 edgeColor = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 
         private bool wiremode = false;
+
+        private readonly RenameDialog renameDialog_form = new RenameDialog();
 
         public Form1()
         {
@@ -506,7 +508,7 @@ namespace STLViewer
 
 
             }
-            if ((e.KeyCode == Keys.S) && (e.Control)) // Save Compensated model
+            if ((e.KeyCode == Keys.S) && e.Control) // Save Compensated model
             {
                 if (compList != -1)
                 {
@@ -594,6 +596,26 @@ namespace STLViewer
                     }
                 }
             }
+            if ((e.KeyCode == Keys.R) && e.Control && (currentIndex != -1)) // Rename file
+            {
+                var oldName = currentFile;
+
+                var res = renameDialog_form.ShowDialog(oldName, basePath);
+                if (res == DialogResult.OK)
+                {
+                    // update current list
+                    dirList[currentIndex] = renameDialog_form.outputString;
+                    currentFile = renameDialog_form.outputString;
+                    Console.WriteLine($"Renamed {oldName} to {renameDialog_form.outputString}");
+                    // update UI
+                    label1.Text = $"Renamed {oldName} to {renameDialog_form.outputString}";
+                }
+                else if (res == DialogResult.Cancel)
+                {
+                    Console.WriteLine($"Rename cancelled");
+                } 
+
+             }
             ReDraw();
         }
 

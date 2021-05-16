@@ -117,28 +117,4 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="label2.Text" xml:space="preserve">
-    <value>F1: Toggle this help
-
-Left/Right Arrows: Previous/Next file
-Delete: Move file to recycle bin
-Ctrl-R: Rename file
-
-Wheel-Click-Drag: Pan
-Left-Click-Drag: Rotate
-Wheel: Zoom
-
-C: Toggle model color vs default color
-W: Toggle wireframe mode
-O: Cycle outline modes
-
-F12: Open model compensation controls
-Ctrl-S: Save compensated model</value>
-  </data>
-  <metadata name="backgroundWorker_UniqueVertex.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>17, 17</value>
-  </metadata>
-  <metadata name="backgroundWorker_Outline.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>249, 15</value>
-  </metadata>
 </root>
