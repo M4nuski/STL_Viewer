@@ -603,18 +603,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 var res = renameDialog_form.ShowDialog(oldName, basePath);
                 if (res == DialogResult.OK)
                 {
-                    // update current list
-                    dirList[currentIndex] = renameDialog_form.outputString;
+                    // update current list and file
                     currentFile = renameDialog_form.outputString;
-                    Console.WriteLine($"Renamed {oldName} to {renameDialog_form.outputString}");
-                    // update UI
-                    label1.Text = $"Renamed {oldName} to {renameDialog_form.outputString}";
-                }
-                else if (res == DialogResult.Cancel)
-                {
-                    Console.WriteLine($"Rename cancelled");
-                } 
+                    dirList[currentIndex] = renameDialog_form.outputString;
 
+                    // update UI
+                    label1.Text = $"Renamed {oldName} to {currentFile}";
+                }
+                else Console.WriteLine($"Rename cancelled");
              }
             ReDraw();
         }

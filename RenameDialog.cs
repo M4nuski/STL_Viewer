@@ -32,14 +32,8 @@ namespace STLViewer
             return res;
         }
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private void button1_Click(object sender, EventArgs e)
         {
-            // try rename 
             Console.WriteLine($"Path: {basepath}");
             Console.WriteLine($"Renaming {textBox1.Text} to {textBox2.Text}...");
 
