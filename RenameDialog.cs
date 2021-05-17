@@ -24,7 +24,7 @@ namespace STLViewer
         {
             textBox1.Text = inputString;
             textBox2.Text = inputString;
-            textBox2.Focus();
+            textBox2.Select();
             basepath = basePath;
 
             var res = base.ShowDialog();
