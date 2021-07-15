@@ -512,7 +512,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             {
                 if (compList != -1)
                 {
-                    var stlw = new STL_Writer(true);
+                    var stlw = new STL_Writer(loader.Colored);
                     for (int i = 0; i < loader.NumTriangle; i++)
                     {
                         stlw.addFace(newData[i]);
