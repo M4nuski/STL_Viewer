@@ -51,6 +51,21 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private string status = "";
 
         // Compensation data
+        private struct indiceStruct
+        {
+            public int I1; // ref V1 of face
+            public int I2; // ref V2 of face
+            public int I3; // ref V3 of face
+        }
+        public class edgeStruct
+        {
+            public int I1; // ref V1 of edge
+            public int I2; // ref V2 of edge
+
+            public Vector3 N1; // normal of face 1
+            public Vector3 N2; // normal of face 2
+        }
+
         private List<FaceData> newData;
         private indiceStruct[] faceIndices;
 
@@ -92,15 +107,15 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         public List<edgeStruct> edges = new List<edgeStruct>();
 
         // user inputs
-        private float px;// = 0.0f;
-        private float py;// = 0.0f;
-        private float pz;// = 300.0f;
+        private float px = 0.0f;
+        private float py = -75.0f;
+        private float pz = 300.0f;
 
-        private float rx;// = 0.0f;
-        private float ry;// = 0.0f;
+        private float rx = 11.0f;
+        private float ry = -16.0f;
 
-        private int mouse_x;// = 0;
-        private int mouse_y;// = 0;
+        private int mouse_x;
+        private int mouse_y;
         private bool mouse_btn;
         private const float mouseSpeed = 0.15f;
         private const float mouseWheelSpeed = 10.0f;
@@ -491,28 +506,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         public static Shell shell = new Shell();
         public static Folder RecyclingBin = shell.NameSpace(ShellSpecialFolderConstants.ssfBITBUCKET);
 
-        private struct indiceStruct
-        {
-            public int I1; // ref V1 of face
-            public int I2; // ref V2 of face
-            public int I3; // ref V3 of face
-        }
-        public class edgeStruct
-        {
-            public int I1; // ref V1 of edge
-            public int I2; // ref V2 of edge
-
-            public Vector3 N1; // normal of face 1
-            public Vector3 N2; // normal of face 2
-        }
-
-        private Vector3 safeNormalize(Vector3 v)
-        {
-            var l = v.Length;
-            if (Math.Abs(l) < float.Epsilon) return v;
-            return  v / v.Length;
-        }
-
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F1) // Toggle Help label
@@ -827,33 +820,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                         if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I2].Z) uniqueVertexOffsetsNeg[faceIndices[i].I2].Z = loader.Triangles[i].Normal.Z;
                         if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I3].Z) uniqueVertexOffsetsNeg[faceIndices[i].I3].Z = loader.Triangles[i].Normal.Z;
                     }
-
-                    /* V2
-                    var comp = loader.Triangles[i].Normal * offsetDirection; // face comp
-                    var compLenSq = comp.LengthSquared;
-
-                    if (compLenSq > uniqueVertexOffsetsLenSq[faceIndices[i].I1])
-                    {
-                        uniqueVertexOffsets[faceIndices[i].I1] = comp;
-                        uniqueVertexOffsetsLenSq[faceIndices[i].I1] = compLenSq;
-                    }
-                    if (compLenSq > uniqueVertexOffsetsLenSq[faceIndices[i].I2])
-                    {
-                        uniqueVertexOffsets[faceIndices[i].I2] = comp;
-                        uniqueVertexOffsetsLenSq[faceIndices[i].I2] = compLenSq;
-                    }
-                    if (compLenSq > uniqueVertexOffsetsLenSq[faceIndices[i].I3])
-                        {
-                        uniqueVertexOffsets[faceIndices[i].I3] = comp;
-                        uniqueVertexOffsetsLenSq[faceIndices[i].I2] = compLenSq;
-                    }
-                    */
-
-                    /* v1
-                    uniqueVertexOffsets[faceIndices[i].I1] += comp;
-                    uniqueVertexOffsets[faceIndices[i].I2] += comp;
-                    uniqueVertexOffsets[faceIndices[i].I3] += comp;
-                    */
                 }
 
                 // select final offset              
@@ -1255,6 +1221,11 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 UniqueVerticesReady = false;
                 Application.DoEvents();
             }
+        }
+
+        private void renderPanel_Paint(object sender, PaintEventArgs e)
+        {
+            ReDraw();
         }
     }
 }
