@@ -54,7 +54,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private List<FaceData> newData;
         private indiceStruct[] faceIndices;
 
-        private readonly float epsilon = 0.001f;
+        private readonly float epsilon = 0.01f;
         public List<Vector3> uniqueVertices = new List<Vector3>();
         public List<int> uniqueIndices;
         public List<List<int>> uniqueBoundIndices;
@@ -69,8 +69,10 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             public int extractedUniqueIndex;
             public int CompareTo(vertexPackedData other)
             {
-                if (other == null) return 1;
-                return (this.distance < other.distance) ? -1 : 1;
+                if (other == null) return -1;
+                if (this.distance < other.distance) return -1;
+                if (this.distance > other.distance) return  1;
+                return 0;
             } 
         }
 
@@ -967,7 +969,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var bbdata = loader.getBondingBox();
             Vector3 axis = new Vector3(bbdata.maxX - bbdata.minX, bbdata.maxY - bbdata.minY, bbdata.maxZ - bbdata.minZ);
             if (axis.Length < 0.01) axis = new Vector3(0.57735f);
-            axis.Normalize();
+            axis = Vector3.Normalize(axis);
 
             uniqueVertices.Clear();
             uniqueIndices = new List<int>(loader.Triangles.Count * 3);
@@ -1027,7 +1029,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 {
                     data[i].sortedUniqueIndex = i;
                     var j = i + 1;
-                    while ((j < data.Count) && (Math.Abs(data[i].distance - data[j].distance) < epsilon))
+                    while ((j < data.Count) && (Math.Abs(data[i].distance - data[j].distance) < (epsilon * 2f)))
                     {
                         if (v3eq(data[i].pos, data[j].pos))
                         {
@@ -1058,12 +1060,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     uniqueBoundIndices[uniqueBoundIndices.Count - 1].Add(data[i].originalVertexIndex);
 
                     uniqueBoundTriangles.Add(new List<int>());
-                    uniqueBoundTriangles[uniqueBoundTriangles.Count - 1].Add((int)Math.Floor(data[i].originalVertexIndex / 3f));
+                    uniqueBoundTriangles[uniqueBoundTriangles.Count - 1].Add(data[i].originalVertexIndex / 3);
                 }
                 else
                 {
                     uniqueBoundIndices[data[data[i].sortedUniqueIndex].extractedUniqueIndex].Add(data[i].originalVertexIndex);
-                    uniqueBoundTriangles[data[data[i].sortedUniqueIndex].extractedUniqueIndex].Add((int)Math.Floor(data[i].originalVertexIndex / 3f));
+                    uniqueBoundTriangles[data[data[i].sortedUniqueIndex].extractedUniqueIndex].Add(data[i].originalVertexIndex / 3);
                 }
 
                 uniqueIndices.Add(-1);
