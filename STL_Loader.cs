@@ -20,8 +20,7 @@ namespace STLViewer
 
     class STL_Loader
     {
-        public UInt32 NumTriangle;
-        public FaceData[] Triangles;
+        public List<FaceData> Triangles = new List<FaceData>();
         public bool Colored;
         public string Type;
         public enum NormalsRecalcMode { never, asNeeded, always };
@@ -99,7 +98,6 @@ namespace STLViewer
         {
             Colored = false;
             Type = "";
-            NumTriangle = 0;
         }
 
         public void loadFile(string fileName, NormalsRecalcMode recalcNormals = NormalsRecalcMode.asNeeded )
@@ -107,213 +105,221 @@ namespace STLViewer
             char[] spaceSeperator = { ' ' };
             Colored = false;
             Type = "";
-            NumTriangle = 0;
+            Triangles.Clear();
 
-            if (File.Exists(fileName))
+            if (!File.Exists(fileName)) return;
+
+            FileStream fileStream = null;
+            BinaryReader binaryReader = null;
+            StreamReader textStream = null;
+            try
             {
-                FileStream fileStream = null;
-                BinaryReader binaryReader = null;
-                StreamReader textStream = null;
-                try
+                fileStream = File.OpenRead(fileName);
+                binaryReader = new BinaryReader(fileStream);
+
+                var header = new byte[80];
+                binaryReader.Read(header, 0, 80);
+
+                Colored = colorMarker(header);
+                if (Colored) Console.WriteLine("Color header found");
+                var normalsRecalculated = false;
+
+                var textMode = textMarker(header);
+                if (textMode)
                 {
-                    fileStream = File.OpenRead(fileName);
-                    binaryReader = new BinaryReader(fileStream);
-
-                    var header = new byte[80];
-                    binaryReader.Read(header, 0, 80);
-
-                    Colored = colorMarker(header);
-                    if (Colored) Console.WriteLine("Color header found");
-                    var normalsRecalculated = false;
-
-                    var textMode = textMarker(header);
-                    if (textMode)
+                    Console.WriteLine("Potential ASCII STL file");
+                    textStream = File.OpenText(fileName);
+                    var s = textStream.ReadLine()?.Trim();
+                    if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "solid")
+                        throw new Exception("Malformed ASCII STL (expected \"solid\")");
+                    s = textStream.ReadLine()?.Trim() ?? "";
+                    var ss = s.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries);
+                    if (ss[0].Trim() != "facet")
                     {
-                        Console.WriteLine("Potential ASCII STL file");
-                        textStream = File.OpenText(fileName);
-                        var s = textStream.ReadLine()?.Trim();
-                        if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "solid")
-                            throw new Exception("Malformed ASCII STL (expected \"solid\")");
-                        s = textStream.ReadLine()?.Trim() ?? "";
+                        textMode = false;
+                        Console.WriteLine("Hybrid STL or malformed ASCII STL");
+                        Type = "Hybrid";
+                    }
+                    else
+                    {
+                        Type = "ASCII";
+                    }
+                    textStream.Close();
+                }
+                else
+                {
+                    Type = "Binary";
+                }
+
+                if (textMode)
+                {
+                    textStream = File.OpenText(fileName);
+                    Console.WriteLine("ASCII STL file");
+                    Triangles.Clear();
+
+                    var s = textStream.ReadLine()?.Trim(); 
+                    // solid x
+                    if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "solid") throw new Exception("Malformed ASCII STL (expected \"solid\")");
+                    if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[1] != null) Console.WriteLine("solid name " + s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[1]); 
+
+                    s = textStream.ReadLine()?.Trim();
+
+                    while ((s != null) && (!textStream.EndOfStream) && (s.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "endsolid"))
+                    {
+                        var n = new Vector3(0.0f);
+                        var v1 = new Vector3(0.0f);
+                        var v2 = new Vector3(0.0f);
+                        var v3 = new Vector3(0.0f);
+
+                        // facet 
                         var ss = s.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries);
-                        if (ss[0].Trim() != "facet")
+                        if (ss[0].Trim() != "facet") throw new Exception("Malformed ASCII STL (expected \"facet\") at triangle " + Triangles.Count);
+                        // normal
+                        if (ss[1].Trim() == "normal")
                         {
-                            textMode = false;
-                            Console.WriteLine("Hybrid STL or malformed ASCII STL");
-                            Type = "Hybrid";
+                            n.X = convertFloatString(ss[2].Trim());
+                            n.Y = convertFloatString(ss[3].Trim());
+                            n.Z = convertFloatString(ss[4].Trim());
+                        }
+
+                        // outer loop
+                        s = textStream.ReadLine()?.Trim();
+                        if (s?.Trim() != "outer loop") throw new Exception("Malformed ASCII STL (expected \"outer loop\") at triangle " + Triangles.Count);
+
+                        // vertex 1
+                        s = textStream.ReadLine()?.Trim(); 
+                        ss = s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries) ?? new string[] { "" };
+                        if (ss[0].Trim() != "vertex")
+                        {
+                            throw new Exception("Malformed ASCII STL (expected \"vertex\") at triangle " + Triangles.Count);
                         }
                         else
                         {
-                            Type = "ASCII";
+                            v1.X = convertFloatString(ss[1].Trim());
+                            v1.Y = convertFloatString(ss[2].Trim());
+                            v1.Z = convertFloatString(ss[3].Trim());
                         }
-                        textStream.Close();
-                    }
-                    else
-                    {
-                        Type = "Binary";
-                    }
 
-                    if (textMode)
-                    {
-                        textStream = File.OpenText(fileName);
-                        NumTriangle = 0;
-                        Console.WriteLine("ASCII STL file");
-                        var Tlist = new List<FaceData>();
+                        // vertex 2
+                        s = textStream.ReadLine()?.Trim();
+                        ss = s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries) ?? new string[] { "" };
+                        if (ss[0].Trim() != "vertex")
+                        {
+                            throw new Exception("Malformed ASCII STL (expected \"vertex\") at triangle " + Triangles.Count);
+                        }
+                        else
+                        {
+                            v2.X = convertFloatString(ss[1].Trim());
+                            v2.Y = convertFloatString(ss[2].Trim());
+                            v2.Z = convertFloatString(ss[3].Trim());
+                        }
 
-                        var s = textStream.ReadLine()?.Trim(); 
-                        // solid x
-                        if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "solid") throw new Exception("Malformed ASCII STL (expected \"solid\")");
-                        if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[1] != null) Console.WriteLine("solid name " + s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[1]); 
+                        // vertex 3
+                        s = textStream.ReadLine()?.Trim();
+                        ss = s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries) ?? new string[] { "" };
+                        if (ss[0].Trim() != "vertex")
+                        {
+                            throw new Exception("Malformed ASCII STL (expected \"vertex\") at triangle " + Triangles.Count);
+                        }
+                        else
+                        {
+                            v3.X = convertFloatString(ss[1].Trim());
+                            v3.Y = convertFloatString(ss[2].Trim());
+                            v3.Z = convertFloatString(ss[3].Trim());
+                        }
+
+
+
+                        // endloop
+                        s = textStream.ReadLine()?.Trim();
+                        if (s?.Trim() != "endloop") throw new Exception("Malformed ASCII STL (expected \"endloop\") at triangle " + Triangles.Count);
+
+                        // endfacet
+                        s = textStream.ReadLine()?.Trim();
+                        if (s?.Trim() != "endfacet") throw new Exception("Malformed ASCII STL (expected \"endfacet\") at triangle " + Triangles.Count);
+
+
+                        Triangles.Add( new FaceData()
+                        {
+                            Color = new Vector4(0.75f, 0.75f, 0.75f, 1.0f),
+                            Normal = n,
+                            V1 = v1,
+                            V2 = v2,
+                            V3 = v3
+                        });
+
+
+
 
                         s = textStream.ReadLine()?.Trim();
-
-                        while ((s != null) && (!textStream.EndOfStream) && (s.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "endsolid"))
-                        {
-                            var n = new Vector3(0.0f);
-                            var v1 = new Vector3(0.0f);
-                            var v2 = new Vector3(0.0f);
-                            var v3 = new Vector3(0.0f);
-
-                            // facet 
-                            var ss = s.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries);
-                            if (ss[0].Trim() != "facet") throw new Exception("Malformed ASCII STL (expected \"facet\") at triangle " + NumTriangle);
-                            // normal
-                            if (ss[1].Trim() == "normal")
-                            {
-                                n.X = convertFloatString(ss[2].Trim());
-                                n.Y = convertFloatString(ss[3].Trim());
-                                n.Z = convertFloatString(ss[4].Trim());
-                            }
-
-                            // outer loop
-                            s = textStream.ReadLine()?.Trim();
-                            if (s?.Trim() != "outer loop") throw new Exception("Malformed ASCII STL (expected \"outer loop\") at triangle " + NumTriangle);
-
-                            // vertex 1
-                            s = textStream.ReadLine()?.Trim(); 
-                            ss = s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries) ?? new string[] { "" };
-                            if (ss[0].Trim() != "vertex")
-                            {
-                                throw new Exception("Malformed ASCII STL (expected \"vertex\") at triangle " + NumTriangle);
-                            }
-                            else
-                            {
-                                v1.X = convertFloatString(ss[1].Trim());
-                                v1.Y = convertFloatString(ss[2].Trim());
-                                v1.Z = convertFloatString(ss[3].Trim());
-                            }
-
-                            // vertex 2
-                            s = textStream.ReadLine()?.Trim();
-                            ss = s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries) ?? new string[] { "" };
-                            if (ss[0].Trim() != "vertex")
-                            {
-                                throw new Exception("Malformed ASCII STL (expected \"vertex\") at triangle " + NumTriangle);
-                            }
-                            else
-                            {
-                                v2.X = convertFloatString(ss[1].Trim());
-                                v2.Y = convertFloatString(ss[2].Trim());
-                                v2.Z = convertFloatString(ss[3].Trim());
-                            }
-
-                            // vertex 3
-                            s = textStream.ReadLine()?.Trim();
-                            ss = s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries) ?? new string[] { "" };
-                            if (ss[0].Trim() != "vertex")
-                            {
-                                throw new Exception("Malformed ASCII STL (expected \"vertex\") at triangle " + NumTriangle);
-                            }
-                            else
-                            {
-                                v3.X = convertFloatString(ss[1].Trim());
-                                v3.Y = convertFloatString(ss[2].Trim());
-                                v3.Z = convertFloatString(ss[3].Trim());
-                            }
+                    } // end read line while
+                    // endsolid x
+                    if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "endsolid") throw new Exception("Malformed ASCII STL (expected \"endsolid\"");
 
 
-
-                            // endloop
-                            s = textStream.ReadLine()?.Trim();
-                            if (s?.Trim() != "endloop") throw new Exception("Malformed ASCII STL (expected \"endloop\") at triangle " + NumTriangle);
-
-                            // endfacet
-                            s = textStream.ReadLine()?.Trim();
-                            if (s?.Trim() != "endfacet") throw new Exception("Malformed ASCII STL (expected \"endfacet\") at triangle " + NumTriangle);
-
-
-                            Tlist.Add( new FaceData()
-                            {
-                                Color = new Vector4(0.75f, 0.75f, 0.75f, 1.0f),
-                                Normal = n,
-                                V1 = v1,
-                                V2 = v2,
-                                V3 = v3
-                            });
-
-
-                            NumTriangle++;
-
-                            s = textStream.ReadLine()?.Trim();
-                        } // end read line while
-                        // endsolid x
-                        if (s?.Split(spaceSeperator, StringSplitOptions.RemoveEmptyEntries)[0].Trim() != "endsolid") throw new Exception("Malformed ASCII STL (expected \"endsolid\"");
-
-                        NumTriangle = (uint)Tlist.Count;
-                        Triangles = new FaceData[NumTriangle];
 
        
-                        for (var i = 0; i < NumTriangle; i++)
-                        {
-                            Triangles[i] = Tlist[i];
-
-                            if ( (recalcNormals == NormalsRecalcMode.always) || ((Triangles[i].Normal.LengthSquared < 0.9f) && (recalcNormals == NormalsRecalcMode.asNeeded)) )
-                            {
-                                Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
-                                normalsRecalculated = true;
-                            }
-                        }
-
-
-                    } // end textMode
-
-                    else
+                    for (var i = 0; i < Triangles.Count; i++)
                     {
-                        Console.WriteLine("Binary STL file");
-                        NumTriangle = binaryReader.ReadUInt32();
 
-                        Triangles = new FaceData[NumTriangle];
-                        
-                        for (var i = 0; i < NumTriangle; i++)
+                        if ( (recalcNormals == NormalsRecalcMode.always) || ((Triangles[i].Normal.LengthSquared < 0.9f) && (recalcNormals == NormalsRecalcMode.asNeeded)) )
                         {
-                            Triangles[i] = ReadFaceData(binaryReader);
-
-                            if ((recalcNormals == NormalsRecalcMode.always) || ((Triangles[i].Normal.LengthSquared < 0.9f) && (recalcNormals == NormalsRecalcMode.asNeeded)))
-                            {
-                                Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
-                                normalsRecalculated = true;
-                            }
+                            Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
+                            normalsRecalculated = true;
                         }
-                        
                     }
 
-                    if (normalsRecalculated) Console.WriteLine("Normals recalculated");
 
-                }
-                catch (Exception ex)
+                } // end textMode
+
+                else
                 {
-                    Console.WriteLine("STL_Loader Error: " + ex.Message);
-                    NumTriangle = 0;
-                    Triangles = new FaceData[0];
-                    Colored = false;
+                    Console.WriteLine("Binary STL file");
+                    var NumTriangle = binaryReader.ReadUInt32();
+
+                    for (var i = 0; i < NumTriangle; i++)
+                    {
+                        Triangles.Add(ReadFaceData(binaryReader));
+
+                        if ((recalcNormals == NormalsRecalcMode.always) || ((Triangles[i].Normal.LengthSquared < 0.9f) && (recalcNormals == NormalsRecalcMode.asNeeded)))
+                        {
+                            Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
+                            normalsRecalculated = true;
+                        }
+                    }
+                        
                 }
-                finally
+
+                if (normalsRecalculated) Console.WriteLine("Normals recalculated");
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("STL_Loader Error: " + ex.Message);
+                Triangles.Clear();
+                Colored = false;
+            }
+            finally
+            {
+                binaryReader?.Close();
+                fileStream?.Close();
+                textStream?.Close();
+            }
+
+            // remove triangles whitout area
+            /*var remCount = 0;
+            for (int i = Triangles.Count-1; i >= 0; --i)
+            {
+                if ( (Vector3.DistanceSquared(Triangles[i].V1, Triangles[i].V2) < 0.0001) ||
+                     (Vector3.DistanceSquared(Triangles[i].V2, Triangles[i].V3) < 0.0001) ||
+                     (Vector3.DistanceSquared(Triangles[i].V3, Triangles[i].V1) < 0.0001) )
                 {
-                    binaryReader?.Close();
-                    fileStream?.Close();
-                    textStream?.Close();
+                    Triangles.RemoveAt(i); 
+                    remCount++;
                 }
             }
+            Console.WriteLine("Removed arealess triangles: " + remCount);
+            */
         }
 
         public static Vector3 getNormal(Vector3 p0, Vector3 p1, Vector3 p2)
@@ -339,7 +345,7 @@ namespace STLViewer
             };
 
 
-            for (var i = 0; i < NumTriangle; i++)
+            for (var i = 0; i < Triangles.Count; i++)
             {
                 if (Triangles[i].V1.X > res.maxX) res.maxX = Triangles[i].V1.X;
                 if (Triangles[i].V1.X < res.minX) res.minX = Triangles[i].V1.X;

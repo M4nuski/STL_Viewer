@@ -58,6 +58,7 @@
             this.renderPanel.Name = "renderPanel";
             this.renderPanel.Size = new System.Drawing.Size(1024, 720);
             this.renderPanel.TabIndex = 0;
+            this.renderPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.renderPanel_Paint);
             this.renderPanel.MouseDown += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseDown);
             this.renderPanel.MouseLeave += new System.EventHandler(this.panel1_MouseLeave);
             this.renderPanel.MouseMove += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseMove);
