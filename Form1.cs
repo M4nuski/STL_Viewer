@@ -51,9 +51,28 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private string status = "";
 
         // Compensation data
-        private FaceData[] newData;
+        private List<FaceData> newData;
         private indiceStruct[] faceIndices;
-        public List<Vector3> uniqueVertex = new List<Vector3>();
+
+        private readonly float epsilon = 0.01f;
+        public List<Vector3> uniqueVertices = new List<Vector3>();
+        public List<int> uniqueIndices;
+        public List<List<int>> uniqueBoundIndices;
+        public List<List<int>> uniqueBoundTriangles;
+
+        private class vertexPackedData:IComparable<vertexPackedData> {
+            public Vector3 pos;
+            public float distance;
+            public int originalVertexIndex;
+            public bool isUnique = true;
+            public int sortedUniqueIndex;
+            public int extractedUniqueIndex;
+            public int CompareTo(vertexPackedData other)
+            {
+                if (other == null) return 1;
+                return (this.distance < other.distance) ? -1 : 1;
+            } 
+        }
 
         private bool UniqueVerticesReady = false;
         private bool OutlineReady = false;
@@ -242,7 +261,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             px = 0;
 
             // prepare model data
-            if (loader?.NumTriangle > 0)
+            if (loader?.Triangles.Count > 0)
             {
                 if (colList != -1) GL.DeleteLists(colList, 1);
                 if (defList != -1) GL.DeleteLists(defList, 1);
@@ -255,7 +274,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
                 colList = GL.GenLists(1);
                 GL.NewList(colList, ListMode.Compile);
-                drawModel(!loader.Colored, (int)loader.NumTriangle, loader.Triangles);
+                drawModel(!loader.Colored, (int)loader.Triangles.Count, loader.Triangles);
                 GL.EndList();
                 Console.WriteLine("Gen default model list data yields " + GL.GetError());
 
@@ -264,11 +283,11 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 {
                     defList = GL.GenLists(1);
                     GL.NewList(defList, ListMode.Compile);
-                    drawModel(true, (int)loader.NumTriangle, loader.Triangles);
+                    drawModel(true, (int)loader.Triangles.Count, loader.Triangles);
                     GL.EndList();
                     Console.WriteLine("Gen colored model list data yields " + GL.GetError());
                 }
-                status = currentFile + " " + loader.NumTriangle + " triangles (" + loader.Type + ") ";
+                status = currentFile + " " + loader.Triangles.Count + " triangles (" + loader.Type + ") ";
                 label1.Text = status;
 
             }
@@ -278,13 +297,13 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             Console.WriteLine("model loaded in " + (perfCount.ElapsedMilliseconds - loadStart));
             compCtrlPanel.Hide();
 
-            if (loader?.NumTriangle > 0)
+            if (loader?.Triangles.Count > 0)
             {
-                Console.WriteLine("num vertex " + loader.NumTriangle * 3);
+                Console.WriteLine("num vertex " + loader.Triangles.Count * 3);
 
                 // prep data for comp
-                faceIndices = new indiceStruct[loader.NumTriangle];
-                uniqueVertex.Clear();
+                faceIndices = new indiceStruct[loader.Triangles.Count];
+                uniqueVertices.Clear();
                 UniqueVerticesReady = false;
                 // start checking for unique vertices
                 _BGW_UV_resetEvent.Reset();
@@ -294,7 +313,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }  
         }
 
-        private void drawModel(bool overrideColors, int nbTriangles, FaceData[] data)
+        private void drawModel(bool overrideColors, int nbTriangles, List<FaceData> data)
         {
             GL.Begin(PrimitiveType.Triangles);
             for (var i = 0; i < nbTriangles; i++)
@@ -383,7 +402,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 // model
                 GL.Translate(modelPos);
 
-                if (loader?.NumTriangle > 0)
+                if (loader?.Triangles.Count > 0)
                 {
                     if ((compList > 0) && compCtrlPanel.Visible)
                     {
@@ -513,7 +532,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 if (compList != -1)
                 {
                     var stlw = new STL_Writer(loader.Colored);
-                    for (int i = 0; i < loader.NumTriangle; i++)
+                    for (int i = 0; i < loader.Triangles.Count; i++)
                     {
                         stlw.addFace(newData[i]);
                     }
@@ -757,12 +776,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 label1.Text = "Total compensation (mm) X:" + (2.0f* offsetX).ToString("F3") + " Y:" + (2.0f * offsetY).ToString("F3") + " Z:" + (2.0f * offsetZ).ToString("F3");
 
                 // Prep opt and compare data
-                var uniqueVertexOffsets = new Vector3[uniqueVertex.Count];
-                var uniqueVertexOffsetsNeg = new Vector3[uniqueVertex.Count];
-                var uniqueVertexOffsetsPos = new Vector3[uniqueVertex.Count];
+                var uniqueVertexOffsets = new Vector3[uniqueVertices.Count];
+                var uniqueVertexOffsetsNeg = new Vector3[uniqueVertices.Count];
+                var uniqueVertexOffsetsPos = new Vector3[uniqueVertices.Count];
 
                 // compensate for offset, find longest normal in offset direction
-                for (var i = 0; i < loader.NumTriangle; ++i)
+                for (var i = 0; i < loader.Triangles.Count; ++i)
                 {
                     // X
                     if (loader.Triangles[i].Normal.X > 0.0f)
@@ -835,7 +854,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
 
                 // select final offset              
-                for (var i = 0; i < uniqueVertex.Count; ++i)
+                for (var i = 0; i < uniqueVertices.Count; ++i)
                 {
                     uniqueVertexOffsets[i].X = offsetX * (uniqueVertexOffsetsPos[i].X + uniqueVertexOffsetsNeg[i].X);
                     uniqueVertexOffsets[i].Y = offsetY * (uniqueVertexOffsetsPos[i].Y + uniqueVertexOffsetsNeg[i].Y);
@@ -843,17 +862,17 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
 
                 // apply offset to data
-                newData = new FaceData[loader.NumTriangle];
-                for (var i = 0; i < loader.NumTriangle; ++i)
+                newData = new List<FaceData>(loader.Triangles.Count);
+                for (var i = 0; i < loader.Triangles.Count; ++i)
                 {
-                    newData[i] = new FaceData
+                    newData.Add(new FaceData
                     {
                         V1 = loader.Triangles[i].V1 + uniqueVertexOffsets[faceIndices[i].I1],
                         V2 = loader.Triangles[i].V2 + uniqueVertexOffsets[faceIndices[i].I2],
                         V3 = loader.Triangles[i].V3 + uniqueVertexOffsets[faceIndices[i].I3],
                         Normal = loader.Triangles[i].Normal,
                         Color = loader.Triangles[i].Color
-                    };
+                    });
                 }
 
                 // create render list
@@ -861,7 +880,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
                 compList = GL.GenLists(1);
                 GL.NewList(compList, ListMode.Compile);
-                drawModel(!false, (int)loader.NumTriangle, newData);
+                drawModel(!false, loader.Triangles.Count, newData);
                 GL.EndList();
                 //Console.WriteLine("Gen model compList data yields " + GL.GetError());
             }
@@ -889,8 +908,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     var offset = (edges[i].N2 + edges[i].N1);
                     offset = offset * 0.005f;
 
-                    GL.Vertex3(uniqueVertex[edges[i].I1] + offset);
-                    GL.Vertex3(uniqueVertex[edges[i].I2] + offset);
+                    GL.Vertex3(uniqueVertices[edges[i].I1] + offset);
+                    GL.Vertex3(uniqueVertices[edges[i].I2] + offset);
 
                 }
             }
@@ -915,8 +934,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
             else
             {
-                label1.Text = status + $"Found {uniqueVertex.Count} unique vertex out of {loader.NumTriangle * 3}";
-                Console.WriteLine("num unique vertex " + uniqueVertex.Count);
+                label1.Text = status + $"Found {uniqueVertices.Count} unique vertex out of {loader.Triangles.Count * 3}";
+                Console.WriteLine("num unique vertex " + uniqueVertices.Count);
                 Console.WriteLine("model analysed in " + (perfCount.ElapsedMilliseconds - loadStart));
                 UniqueVerticesReady = true;
                 ReDraw();
@@ -934,21 +953,165 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             label1.Text = status + $"Analysing model {e.ProgressPercentage}%";
         }
 
+        private bool v3eq(Vector3 a, Vector3 b)
+        {
+            return (Math.Abs(a.X - b.X) < epsilon) && (Math.Abs(a.Y - b.Y) < epsilon) && (Math.Abs(a.Y - b.Y) < epsilon);
+        }
         private void backgroundWorker_Uniques_DoWork(object sender, DoWorkEventArgs e)
         {
+            // setup
             BackgroundWorker thisWorker = sender as BackgroundWorker;
-            var slice = (int)Math.Round(8000 / Math.Log(loader.NumTriangle, 2));
+            var slice = (int)Math.Round(8000 / Math.Log(loader.Triangles.Count, 2));
             if (slice < 10) slice = 10;
             Console.WriteLine("Slice size: " + slice);
             loadStart = perfCount.ElapsedMilliseconds;
 
-            for (var i = 0; i < loader.NumTriangle; ++i)
+
+            // prepare axis
+            var bbdata = loader.getBondingBox();
+            Vector3 axis = new Vector3(bbdata.maxX - bbdata.minX, bbdata.maxY - bbdata.minY, bbdata.maxZ - bbdata.minZ);
+            if (axis.Length < 0.01) axis = new Vector3(0.57735f);
+            axis.Normalize();
+            uniqueVertices.Clear();
+            uniqueIndices = new List<int>(loader.Triangles.Count * 3);
+            uniqueBoundIndices = new List<List<int>>();
+            uniqueBoundTriangles = new List<List<int>>();
+
+            // unpack data
+            var data = new List<vertexPackedData>();
+            var index = 0;
+            for (var i = 0; i < loader.Triangles.Count; ++i)
+            {
+                // V1
+                var vpd = new vertexPackedData();
+                vpd.pos = loader.Triangles[i].V1;
+                vpd.distance = Vector3.Dot(axis, vpd.pos);
+                vpd.originalVertexIndex = index++;
+                data.Add(vpd);
+
+                // V2
+                vpd = new vertexPackedData();
+                vpd.pos = loader.Triangles[i].V2;
+                vpd.distance = Vector3.Dot(axis, vpd.pos);
+                vpd.originalVertexIndex = index++;
+                data.Add(vpd);
+
+                // V3
+                vpd = new vertexPackedData();
+                vpd.pos = loader.Triangles[i].V3;
+                vpd.distance = Vector3.Dot(axis, vpd.pos);
+                vpd.originalVertexIndex = index++;
+                data.Add(vpd);
+            }
+
+            // Report Progress
+            thisWorker.ReportProgress(20);
+            // Check for cancellation
+            if (thisWorker.CancellationPending == true)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            // sort along axis
+            data.Sort();
+
+            // Report Progress
+            thisWorker.ReportProgress(40);
+            // Check for cancellation
+            if (thisWorker.CancellationPending == true)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            // walk the array and flag vertex that are not unique anymore
+            for (int i = 0; i < data.Count - 1; ++i) if (data[i].isUnique)
+                {
+                    data[i].sortedUniqueIndex = i;
+                    var j = i + 1;
+                    while ((j < data.Count) && (Math.Abs(data[i].distance - data[j].distance) < epsilon))
+                    {
+                        if (v3eq(data[i].pos, data[j].pos))
+                        {
+                            data[j].isUnique = false;
+                            data[j].sortedUniqueIndex = i;
+                        }
+                        ++j;
+                    }
+                }
+
+            // Report Progress
+            thisWorker.ReportProgress(60);
+            // Check for cancellation
+            if (thisWorker.CancellationPending == true)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            // assign indices
+            for (int i = 0; i < data.Count; ++i)
+            {
+                if (data[i].isUnique)
+                {
+                    uniqueVertices.Add(new Vector3(data[i].pos));
+                    data[i].extractedUniqueIndex = uniqueVertices.Count - 1;
+                    uniqueBoundIndices.Add(new List<int>());
+                    uniqueBoundIndices[uniqueBoundIndices.Count - 1].Add(data[i].originalVertexIndex);
+
+                    uniqueBoundTriangles.Add(new List<int>());
+                    uniqueBoundTriangles[uniqueBoundTriangles.Count - 1].Add(data[i].originalVertexIndex / 3);
+                }
+                else
+                {
+                    uniqueBoundIndices[data[data[i].sortedUniqueIndex].extractedUniqueIndex].Add(data[i].originalVertexIndex);
+                    uniqueBoundTriangles[data[data[i].sortedUniqueIndex].extractedUniqueIndex].Add((int)Math.Floor(data[i].originalVertexIndex / 3f));
+                }
+
+                uniqueIndices.Add(-1);
+            }
+
+            // Report Progress
+            thisWorker.ReportProgress(80);
+            // Check for cancellation
+            if (thisWorker.CancellationPending == true)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            // extract indices
+            for (int i = 0; i < data.Count; ++i)
+            { 
+                uniqueIndices[data[i].originalVertexIndex] = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
+                var tri = data[i].originalVertexIndex / 3;
+                var ver = data[i].originalVertexIndex % 3;
+                if (ver == 0) faceIndices[tri].I1 = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
+                if (ver == 1) faceIndices[tri].I2 = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
+                if (ver == 2) faceIndices[tri].I3 = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
+            }
+
+            // Report Progress
+            thisWorker.ReportProgress(100);
+
+            _BGW_UV_resetEvent.Set();
+        }
+        private void backgroundWorker_Uniques_DoWork_OLD(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker thisWorker = sender as BackgroundWorker;
+            var slice = (int)Math.Round(8000 / Math.Log(loader.Triangles.Count, 2));
+            if (slice < 10) slice = 10;
+            Console.WriteLine("Slice size: " + slice);
+            loadStart = perfCount.ElapsedMilliseconds;
+
+            for (var i = 0; i < loader.Triangles.Count; ++i)
             {
                 
                 // Report Progress
-                if ((loader.NumTriangle > slice) && ((i % slice) == 0))
+                if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
                 {
-                    thisWorker.ReportProgress(100 * i / (int)loader.NumTriangle);
+                    thisWorker.ReportProgress(100 * i / loader.Triangles.Count);
 
                     // Check for cancellation
                     if (thisWorker.CancellationPending == true)
@@ -961,9 +1124,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 // V1
                 var unique = true;
                 var curVert = loader.Triangles[i].V1;
-                for (var j = 0; j < uniqueVertex.Count; ++j)
+                for (var j = 0; j < uniqueVertices.Count; ++j)
                 {
-                    if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                    if ((unique) && (epsEqual(uniqueVertices[j], curVert, 0.01f)))
                     {
                         unique = false;
                         faceIndices[i].I1 = j;
@@ -972,17 +1135,17 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
                 if (unique)
                 {
-                    uniqueVertex.Add(curVert);
-                    faceIndices[i].I1 = uniqueVertex.Count - 1;
+                    uniqueVertices.Add(curVert);
+                    faceIndices[i].I1 = uniqueVertices.Count - 1;
                 }
 
 
                 // V2
                 unique = true;
                 curVert = loader.Triangles[i].V2;
-                for (var j = 0; j < uniqueVertex.Count; ++j)
+                for (var j = 0; j < uniqueVertices.Count; ++j)
                 {
-                    if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                    if ((unique) && (epsEqual(uniqueVertices[j], curVert, 0.01f)))
                     {
                         unique = false;
                         faceIndices[i].I2 = j;
@@ -991,16 +1154,16 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
                 if (unique)
                 {
-                    uniqueVertex.Add(curVert);
-                    faceIndices[i].I2 = uniqueVertex.Count - 1;
+                    uniqueVertices.Add(curVert);
+                    faceIndices[i].I2 = uniqueVertices.Count - 1;
                 }
 
                 // V3
                 unique = true;
                 curVert = loader.Triangles[i].V3;
-                for (var j = 0; j < uniqueVertex.Count; ++j)
+                for (var j = 0; j < uniqueVertices.Count; ++j)
                 {
-                    if ((unique) && (epsEqual(uniqueVertex[j], curVert, 0.01f)))
+                    if ((unique) && (epsEqual(uniqueVertices[j], curVert, 0.01f)))
                     {
                         unique = false;
                         faceIndices[i].I3 = j;
@@ -1009,8 +1172,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
                 if (unique)
                 {
-                    uniqueVertex.Add(curVert);
-                    faceIndices[i].I3 = uniqueVertex.Count - 1;
+                    uniqueVertices.Add(curVert);
+                    faceIndices[i].I3 = uniqueVertices.Count - 1;
                 }
             }
 
@@ -1021,18 +1184,18 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private void backgroundWorker_Outline_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
         {
             BackgroundWorker thisWorker = sender as BackgroundWorker;
-            var slice = (int)Math.Round(8000 / Math.Log(loader.NumTriangle, 2));
+            var slice = (int)Math.Round(8000 / Math.Log(loader.Triangles.Count, 2));
             if (slice < 10) slice = 10;
             Console.WriteLine("Slice size: " + slice);
             loadStart = perfCount.ElapsedMilliseconds;
 
-            for (var i = 0; i < loader.NumTriangle; ++i)
+            for (var i = 0; i < loader.Triangles.Count; ++i)
             {
 
                 // Report Progress
-                if ((loader.NumTriangle > slice) && ((i % slice) == 0))
+                if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
                 {
-                    thisWorker.ReportProgress(100 * i / (int)loader.NumTriangle);
+                    thisWorker.ReportProgress(100 * i / loader.Triangles.Count);
 
                     // Check for cancellation
                     if (thisWorker.CancellationPending == true)
