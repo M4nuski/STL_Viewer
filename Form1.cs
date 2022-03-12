@@ -57,7 +57,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private readonly float epsilon = 0.01f;
         public List<Vector3> uniqueVertices = new List<Vector3>();
         public List<int> uniqueIndices;
-        public List<List<int>> uniqueBoundIndices;
         public List<List<int>> uniqueBoundTriangles;
 
         private class vertexPackedData:IComparable<vertexPackedData> {
@@ -74,6 +73,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 if (this.distance > other.distance) return  1;
                 return 0;
             } 
+        }
+        private class trianglePackedData
+        {
+            public List<int> indiceList = new List<int>();
+            public Vector3 n;
+            public List<int> ti1; // neighbourg triangles indices
+            public List<int> ti2;
+            public List<int> ti3;
         }
 
         private bool UniqueVerticesReady = false;
@@ -492,7 +499,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         }
         public class edgeStruct
         {
-            public bool done = false;
             public int I1; // ref V1 of edge
             public int I2; // ref V2 of edge
 
@@ -505,11 +511,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var l = v.Length;
             if (Math.Abs(l) < float.Epsilon) return v;
             return  v / v.Length;
-        }
-
-        private bool epsEqual(Vector3 Va, Vector3 Vb, float Eps)
-        {
-            return (Math.Abs(Va.X - Vb.X) <= Eps) && (Math.Abs(Va.Y - Vb.Y) <= Eps) && (Math.Abs(Va.Z - Vb.Z) <= Eps);
         }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
@@ -973,7 +974,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             uniqueVertices.Clear();
             uniqueIndices = new List<int>(loader.Triangles.Count * 3);
-            uniqueBoundIndices = new List<List<int>>();
             uniqueBoundTriangles = new List<List<int>>();
 
             // unpack data
@@ -982,24 +982,30 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             for (var i = 0; i < loader.Triangles.Count; ++i)
             {
                 // V1
-                var vpd = new vertexPackedData();
-                vpd.pos = loader.Triangles[i].V1;
-                vpd.distance = Vector3.Dot(axis, vpd.pos);
-                vpd.originalVertexIndex = index++;
+                var vpd = new vertexPackedData
+                {
+                    pos = loader.Triangles[i].V1,
+                    distance = Vector3.Dot(axis, loader.Triangles[i].V1),
+                    originalVertexIndex = index++
+                };
                 data.Add(vpd);
 
                 // V2
-                vpd = new vertexPackedData();
-                vpd.pos = loader.Triangles[i].V2;
-                vpd.distance = Vector3.Dot(axis, vpd.pos);
-                vpd.originalVertexIndex = index++;
+                vpd = new vertexPackedData
+                {
+                    pos = loader.Triangles[i].V2,
+                    distance = Vector3.Dot(axis, loader.Triangles[i].V2),
+                    originalVertexIndex = index++
+                };
                 data.Add(vpd);
 
                 // V3
-                vpd = new vertexPackedData();
-                vpd.pos = loader.Triangles[i].V3;
-                vpd.distance = Vector3.Dot(axis, vpd.pos);
-                vpd.originalVertexIndex = index++;
+                vpd = new vertexPackedData
+                {
+                    pos = loader.Triangles[i].V3,
+                    distance = Vector3.Dot(axis, loader.Triangles[i].V3),
+                    originalVertexIndex = index++
+                };
                 data.Add(vpd);
             }
 
@@ -1056,15 +1062,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 {
                     uniqueVertices.Add(new Vector3(data[i].pos));
                     data[i].extractedUniqueIndex = uniqueVertices.Count - 1;
-                    uniqueBoundIndices.Add(new List<int>());
-                    uniqueBoundIndices[uniqueBoundIndices.Count - 1].Add(data[i].originalVertexIndex);
 
                     uniqueBoundTriangles.Add(new List<int>());
                     uniqueBoundTriangles[uniqueBoundTriangles.Count - 1].Add(data[i].originalVertexIndex / 3);
                 }
                 else
                 {
-                    uniqueBoundIndices[data[data[i].sortedUniqueIndex].extractedUniqueIndex].Add(data[i].originalVertexIndex);
                     uniqueBoundTriangles[data[data[i].sortedUniqueIndex].extractedUniqueIndex].Add(data[i].originalVertexIndex / 3);
                 }
 
@@ -1096,105 +1099,43 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             _BGW_UV_resetEvent.Set();
         }
-        private void backgroundWorker_Uniques_DoWork_OLD(object sender, DoWorkEventArgs e)
+
+        private List<int> findIn2Array(List<int> a, List<int> b)
         {
-            BackgroundWorker thisWorker = sender as BackgroundWorker;
-            var slice = (int)Math.Round(8000 / Math.Log(loader.Triangles.Count, 2));
-            if (slice < 10) slice = 10;
-            Console.WriteLine("Slice size: " + slice);
-            loadStart = perfCount.ElapsedMilliseconds;
-
-            for (var i = 0; i < loader.Triangles.Count; ++i)
-            {
-                
-                // Report Progress
-                if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
-                {
-                    thisWorker.ReportProgress(100 * i / loader.Triangles.Count);
-
-                    // Check for cancellation
-                    if (thisWorker.CancellationPending == true)
-                    {
-                        e.Cancel = true;
-                        break;
-                    }
-                }
-
-                // V1
-                var unique = true;
-                var curVert = loader.Triangles[i].V1;
-                for (var j = 0; j < uniqueVertices.Count; ++j)
-                {
-                    if ((unique) && (epsEqual(uniqueVertices[j], curVert, 0.01f)))
-                    {
-                        unique = false;
-                        faceIndices[i].I1 = j;
-                        break;
-                    }
-                }
-                if (unique)
-                {
-                    uniqueVertices.Add(curVert);
-                    faceIndices[i].I1 = uniqueVertices.Count - 1;
-                }
-
-
-                // V2
-                unique = true;
-                curVert = loader.Triangles[i].V2;
-                for (var j = 0; j < uniqueVertices.Count; ++j)
-                {
-                    if ((unique) && (epsEqual(uniqueVertices[j], curVert, 0.01f)))
-                    {
-                        unique = false;
-                        faceIndices[i].I2 = j;
-                        break;
-                    }
-                }
-                if (unique)
-                {
-                    uniqueVertices.Add(curVert);
-                    faceIndices[i].I2 = uniqueVertices.Count - 1;
-                }
-
-                // V3
-                unique = true;
-                curVert = loader.Triangles[i].V3;
-                for (var j = 0; j < uniqueVertices.Count; ++j)
-                {
-                    if ((unique) && (epsEqual(uniqueVertices[j], curVert, 0.01f)))
-                    {
-                        unique = false;
-                        faceIndices[i].I3 = j;
-                        break;
-                    }
-                }
-                if (unique)
-                {
-                    uniqueVertices.Add(curVert);
-                    faceIndices[i].I3 = uniqueVertices.Count - 1;
-                }
-            }
-
-
-            _BGW_UV_resetEvent.Set();
+            return a.FindAll((elem) => b.Contains(elem));
+        }
+        private List<int> findIn2ArrayExcept(List<int> a, List<int> b, int exception)
+        {
+            return a.FindAll((elem) => ((elem != exception) && b.Contains(elem)) );
         }
 
         private void backgroundWorker_Outline_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
         {
             BackgroundWorker thisWorker = sender as BackgroundWorker;
-            var slice = (int)Math.Round(8000 / Math.Log(loader.Triangles.Count, 2));
+            var slice = (int)Math.Round(65536 / Math.Log(loader.Triangles.Count, 2));
             if (slice < 10) slice = 10;
             Console.WriteLine("Slice size: " + slice);
             loadStart = perfCount.ElapsedMilliseconds;
 
-            for (var i = 0; i < loader.Triangles.Count; ++i)
+            var data = new List<trianglePackedData>();
+
+            // prepare data
+            for (var i = 0; i < uniqueIndices.Count; i += 3)
             {
+                var tpd = new trianglePackedData();
+                tpd.indiceList.Add(uniqueIndices[i + 0]);
+                tpd.indiceList.Add(uniqueIndices[i + 1]);
+                tpd.indiceList.Add(uniqueIndices[i + 2]);
+                tpd.n = STL_Loader.getNormal(uniqueVertices[tpd.indiceList[0]], uniqueVertices[tpd.indiceList[1]], uniqueVertices[tpd.indiceList[2]]);
+                tpd.ti1 = findIn2ArrayExcept(uniqueBoundTriangles[tpd.indiceList[0]], uniqueBoundTriangles[tpd.indiceList[1]], i / 3);
+                tpd.ti2 = findIn2ArrayExcept(uniqueBoundTriangles[tpd.indiceList[1]], uniqueBoundTriangles[tpd.indiceList[2]], i / 3);
+                tpd.ti3 = findIn2ArrayExcept(uniqueBoundTriangles[tpd.indiceList[2]], uniqueBoundTriangles[tpd.indiceList[0]], i / 3);
+                data.Add(tpd);
 
                 // Report Progress
                 if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
                 {
-                    thisWorker.ReportProgress(100 * i / loader.Triangles.Count);
+                    thisWorker.ReportProgress((50 * i) / uniqueIndices.Count);
 
                     // Check for cancellation
                     if (thisWorker.CancellationPending == true)
@@ -1203,79 +1144,63 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                         break;
                     }
                 }
+            }
 
-
-                // find all corresponding edges
-                // E1
-                // if not in edges list, add to list, assign first normal
-                //if in list assign second normal
-
-                var unique = true;
-                for (int j = 0; j < edges.Count; j++) if (!edges[j].done)
+            // fill edge data ignoring orphan edges (would imply an open hull not suitable for 3D printing)
+            for (var i = 0; i < data.Count; ++i)
+            {
+                // shared edge with t1, not checked before
+                if ((data[i].ti1.Count > 0) && (data[i].ti1[0] > i)) 
                 {
-                    if (((edges[j].I1 == faceIndices[i].I1) && (edges[j].I2 == faceIndices[i].I2)) ||
-                        ((edges[j].I1 == faceIndices[i].I2) && (edges[j].I2 == faceIndices[i].I1))) {
-                        unique = false;
-                        edges[j].N2 = loader.Triangles[i].Normal;
-                        edges[j].done = true;
+                    var edgesIndices = findIn2Array(data[i].indiceList, data[data[i].ti1[0]].indiceList);
+                    var nes = new edgeStruct
+                    {
+                        I1 = edgesIndices[0],
+                        I2 = edgesIndices[1],
+                        N1 = data[i].n,
+                        N2 = data[data[i].ti1[0]].n
+                    };
+                    edges.Add(nes);
+
+                }
+                // shared edge with t2, not checked before
+                if ((data[i].ti2.Count > 0) && (data[i].ti2[0] > i))
+                {
+                    var edgesIndices = findIn2Array(data[i].indiceList, data[data[i].ti2[0]].indiceList);
+                    var nes = new edgeStruct
+                    {
+                        I1 = edgesIndices[0],
+                        I2 = edgesIndices[1],
+                        N1 = data[i].n,
+                        N2 = data[data[i].ti2[0]].n
+                    };
+                    edges.Add(nes);
+                }
+                // shared edge with t3, not checked before
+                if ((data[i].ti3.Count > 0) && (data[i].ti3[0] > i))
+                {
+                    var edgesIndices = findIn2Array(data[i].indiceList, data[data[i].ti3[0]].indiceList);
+                    var nes = new edgeStruct
+                    {
+                        I1 = edgesIndices[0],
+                        I2 = edgesIndices[1],
+                        N1 = data[i].n,
+                        N2 = data[data[i].ti3[0]].n
+                    };
+                    edges.Add(nes);
+                }
+
+                // Report Progress
+                if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
+                {
+                    thisWorker.ReportProgress(50 + (50 * i) / data.Count);
+
+                    // Check for cancellation
+                    if (thisWorker.CancellationPending == true)
+                    {
+                        e.Cancel = true;
                         break;
                     }
-                }
-                if (unique)
-                {
-                    edges.Add(new edgeStruct() {
-                        I1 = faceIndices[i].I1,
-                        I2 = faceIndices[i].I2,
-                        N1 = loader.Triangles[i].Normal
-                     }
-                    );
-                }
-
-
-                unique = true;
-                for (int j = 0; j < edges.Count; j++) if (!edges[j].done)
-                    {
-                    if (((edges[j].I1 == faceIndices[i].I2) && (edges[j].I2 == faceIndices[i].I3)) ||
-                        ((edges[j].I1 == faceIndices[i].I3) && (edges[j].I2 == faceIndices[i].I2)))
-                    {
-                        unique = false;
-                        edges[j].N2 = loader.Triangles[i].Normal;
-                        edges[j].done = true;
-                        break;
-                    }
-                }
-                if (unique)
-                {
-                    edges.Add(new edgeStruct()
-                    {
-                        I1 = faceIndices[i].I2,
-                        I2 = faceIndices[i].I3,
-                        N1 = loader.Triangles[i].Normal
-                    }
-                    );
-                }
-
-                unique = true;
-                for (int j = 0; j < edges.Count; j++) if (!edges[j].done)
-                    {
-                    if (((edges[j].I1 == faceIndices[i].I3) && (edges[j].I2 == faceIndices[i].I1)) ||
-                        ((edges[j].I1 == faceIndices[i].I1) && (edges[j].I2 == faceIndices[i].I3)))
-                    {
-                        unique = false;
-                        edges[j].N2 = loader.Triangles[i].Normal;
-                        edges[j].done = true;
-                        break;
-                    }
-                }
-                if (unique)
-                {
-                    edges.Add(new edgeStruct()
-                    {
-                        I1 = faceIndices[i].I3,
-                        I2 = faceIndices[i].I1,
-                        N1 = loader.Triangles[i].Normal
-                    }
-                    );
                 }
             }
 
