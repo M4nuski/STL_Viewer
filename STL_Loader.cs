@@ -24,6 +24,7 @@ namespace STLViewer
         public FaceData[] Triangles;
         public bool Colored;
         public string Type;
+        public enum NormalsRecalcMode { never, asNeeded, always };
 
         private static Vector3 ReadVector3(BinaryReader reader)
         {
@@ -101,7 +102,7 @@ namespace STLViewer
             NumTriangle = 0;
         }
 
-        public void loadFile(string fileName)
+        public void loadFile(string fileName, NormalsRecalcMode recalcNormals = NormalsRecalcMode.asNeeded )
         {
             char[] spaceSeperator = { ' ' };
             Colored = false;
@@ -266,7 +267,7 @@ namespace STLViewer
                         {
                             Triangles[i] = Tlist[i];
 
-                            if (Triangles[i].Normal.LengthSquared < 0.9f)
+                            if ( (recalcNormals == NormalsRecalcMode.always) || ((Triangles[i].Normal.LengthSquared < 0.9f) && (recalcNormals == NormalsRecalcMode.asNeeded)) )
                             {
                                 Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
                                 normalsRecalculated = true;
@@ -287,7 +288,7 @@ namespace STLViewer
                         {
                             Triangles[i] = ReadFaceData(binaryReader);
 
-                            if (Triangles[i].Normal.LengthSquared < 0.9f)
+                            if ((recalcNormals == NormalsRecalcMode.always) || ((Triangles[i].Normal.LengthSquared < 0.9f) && (recalcNormals == NormalsRecalcMode.asNeeded)))
                             {
                                 Triangles[i].Normal = getNormal(Triangles[i].V1, Triangles[i].V2, Triangles[i].V3);
                                 normalsRecalculated = true;

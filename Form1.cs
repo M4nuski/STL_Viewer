@@ -28,7 +28,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         //OpenGL
         public IWindowInfo WindowInfo;
         public GraphicsContext WindowContext;
-        private float[] pmap; // perspective matrix
+        private float[] pmat; // perspective matrix
         private const float _fov = 45.0f;
 
         //Directory and file content
@@ -92,7 +92,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             perfCount.Start();
             InitializeComponent();
-            pmap = new float[16];
+            pmat = new float[16];
             try
             {
                 defaultColor = new Vector4(
@@ -223,7 +223,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             CancelBGW();
             outlineMode = 1;
 
-            loader.loadFile(basePath + currentFile);
+            loader.loadFile(basePath + currentFile, STL_Loader.NormalsRecalcMode.always);
             bbData = loader.getBondingBox();
 
             // center model on platform
@@ -365,7 +365,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 
                 GL.MatrixMode(MatrixMode.Projection);
-                GL.LoadMatrix(pmap);
+                GL.LoadMatrix(pmat);
                 GL.Translate(0.0f, 0.0f, -pz);
                 GL.Rotate(rx, 1.0f, 0.0f, 0.0f); // ang in degrees
                 GL.Rotate(ry, 0.0f, 1.0f, 0.0f);
@@ -441,22 +441,22 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var f = (float)(1.0 / Math.Tan(FOV / 2.0));
             var nf = (float)(1.0 / (Near - Far));
 
-            pmap[0] = f / AR;
-            pmap[1] = 0.0f;
-            pmap[2] = 0.0f;
-            pmap[3] = 0.0f;
-            pmap[4] = 0.0f;
-            pmap[5] = f;
-            pmap[6] = 0.0f;
-            pmap[7] = 0.0f;
-            pmap[8] = 0.0f;
-            pmap[9] = 0.0f;
-            pmap[10] = (Far + Near) * nf;
-            pmap[11] = -1.0f;
-            pmap[12] = 0.0f;
-            pmap[13] = 0.0f;
-            pmap[14] = 2.0f * Far * Near * nf;
-            pmap[15] = 0.0f;
+            pmat[0] = f / AR;
+            pmat[1] = 0.0f;
+            pmat[2] = 0.0f;
+            pmat[3] = 0.0f;
+            pmat[4] = 0.0f;
+            pmat[5] = f;
+            pmat[6] = 0.0f;
+            pmat[7] = 0.0f;
+            pmat[8] = 0.0f;
+            pmat[9] = 0.0f;
+            pmat[10] = (Far + Near) * nf;
+            pmat[11] = -1.0f;
+            pmat[12] = 0.0f;
+            pmat[13] = 0.0f;
+            pmat[14] = 2.0f * Far * Near * nf;
+            pmat[15] = 0.0f;
         }
 
         // using Shell32;
