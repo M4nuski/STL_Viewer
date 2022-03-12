@@ -155,7 +155,7 @@ namespace STLViewer
                 {
                     textStream = File.OpenText(fileName);
                     Console.WriteLine("ASCII STL file");
-                    var Triangles = new List<FaceData>();
+                    Triangles.Clear();
 
                     var s = textStream.ReadLine()?.Trim(); 
                     // solid x
