@@ -51,7 +51,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private string status = "";
 
         // Compensation data
-        private struct indiceStruct
+        public struct indiceStruct
         {
             public int I1; // ref V1 of face
             public int I2; // ref V2 of face
@@ -62,19 +62,19 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             public int I1; // ref V1 of edge
             public int I2; // ref V2 of edge
 
-            public Vector3 N1; // normal of face 1
-            public Vector3 N2; // normal of face 2
+            public int T1; // index of triangle 1
+            public int T2; // index of triangle 2
         }
 
-        private List<FaceData> newData;
-        private indiceStruct[] faceIndices;
+        public List<FaceData> newData;
+        public indiceStruct[] faceIndices;
 
         private readonly float epsilon = 0.01f;
         public List<Vector3> uniqueVertices = new List<Vector3>();
         public List<int> uniqueIndices;
         public List<List<int>> uniqueBoundTriangles;
 
-        private class vertexPackedData:IComparable<vertexPackedData> {
+        public class vertexPackedData:IComparable<vertexPackedData> {
             public Vector3 pos;
             public float distance;
             public int originalVertexIndex;
@@ -89,10 +89,10 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 return 0;
             } 
         }
-        private class trianglePackedData
+        public class trianglePackedData
         {
             public List<int> indiceList = new List<int>();
-            public Vector3 n;
+            public int triangleIndex;
             public List<int> ti1; // neighbourg triangles indices
             public List<int> ti2;
             public List<int> ti3;
@@ -869,12 +869,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             GL.Begin(PrimitiveType.Lines);
             for (var i = 0; i < edges.Count; i++)
             {
-                if (Math.Abs(Vector3.Dot(edges[i].N1, edges[i].N2)) < 0.8f)
+                if (Math.Abs(Vector3.Dot( loader.Triangles[edges[i].T2].Normal, loader.Triangles[edges[i].T1].Normal)) < 0.8f)
                 {
                     GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, edgeColor);
                     GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, edgeColor);
 
-                    var offset = (edges[i].N2 + edges[i].N1);
+                    var offset = (loader.Triangles[edges[i].T2].Normal + loader.Triangles[edges[i].T1].Normal);
                     offset = offset * 0.005f;
 
                     GL.Vertex3(uniqueVertices[edges[i].I1] + offset);
@@ -929,6 +929,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private void backgroundWorker_Uniques_DoWork(object sender, DoWorkEventArgs e)
         {
             // setup
+            var slice = 16384;
             BackgroundWorker thisWorker = sender as BackgroundWorker;
             loadStart = perfCount.ElapsedMilliseconds;
 
@@ -973,16 +974,24 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     originalVertexIndex = index++
                 };
                 data.Add(vpd);
+
+
+                // Report Progress
+                if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
+                {
+                    thisWorker.ReportProgress(0 + (20 * i) / loader.Triangles.Count);
+
+                    // Check for cancellation
+                    if (thisWorker.CancellationPending == true)
+                    {
+                        e.Cancel = true;
+                        _BGW_UV_resetEvent.Set();
+                        return;
+                    }
+                }
             }
 
-            // Report Progress
-            thisWorker.ReportProgress(20);
-            // Check for cancellation
-            if (thisWorker.CancellationPending == true)
-            {
-                e.Cancel = true;
-                return;
-            }
+
 
             // sort along axis (using precalculated .distance)
             data.Sort();
@@ -993,6 +1002,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (thisWorker.CancellationPending == true)
             {
                 e.Cancel = true;
+                _BGW_UV_resetEvent.Set();
                 return;
             }
 
@@ -1010,16 +1020,21 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                         }
                         ++j;
                     }
-                }
 
-            // Report Progress
-            thisWorker.ReportProgress(60);
-            // Check for cancellation
-            if (thisWorker.CancellationPending == true)
-            {
-                e.Cancel = true;
-                return;
-            }
+                    // Report Progress
+                    if ((data.Count > slice) && ((i % slice) == 0))
+                    {
+                        thisWorker.ReportProgress(40 + (20 * i) / data.Count);
+
+                        // Check for cancellation
+                        if (thisWorker.CancellationPending == true)
+                        {
+                            e.Cancel = true;
+                            _BGW_UV_resetEvent.Set();
+                            return;
+                        }
+                    }
+                }
 
             // assign indices
             for (int i = 0; i < data.Count; ++i)
@@ -1038,15 +1053,20 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
 
                 uniqueIndices.Add(-1);
-            }
 
-            // Report Progress
-            thisWorker.ReportProgress(80);
-            // Check for cancellation
-            if (thisWorker.CancellationPending == true)
-            {
-                e.Cancel = true;
-                return;
+                // Report Progress
+                if ((data.Count > slice) && ((i % slice) == 0))
+                {
+                    thisWorker.ReportProgress(60 + (20 * i) / data.Count);
+
+                    // Check for cancellation
+                    if (thisWorker.CancellationPending == true)
+                    {
+                        e.Cancel = true;
+                        _BGW_UV_resetEvent.Set();
+                        return;
+                    }
+                }
             }
 
             // extract indices
@@ -1058,6 +1078,20 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 if (ver == 0) faceIndices[tri].I1 = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
                 if (ver == 1) faceIndices[tri].I2 = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
                 if (ver == 2) faceIndices[tri].I3 = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
+
+                // Report Progress
+                if ((data.Count > slice) && ((i % slice) == 0))
+                {
+                    thisWorker.ReportProgress(80 + (20 * i) / data.Count);
+
+                    // Check for cancellation
+                    if (thisWorker.CancellationPending == true)
+                    {
+                        e.Cancel = true;
+                        _BGW_UV_resetEvent.Set();
+                        return;
+                    }
+                }
             }
 
             // Report Progress
@@ -1078,9 +1112,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private void backgroundWorker_Outline_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
         {
             BackgroundWorker thisWorker = sender as BackgroundWorker;
-            var slice = (int)Math.Round(65536 / Math.Log(loader.Triangles.Count, 2));
-            if (slice < 10) slice = 10;
-            Console.WriteLine("Slice size: " + slice);
+            var slice = 16384;
             loadStart = perfCount.ElapsedMilliseconds;
 
             var data = new List<trianglePackedData>();
@@ -1092,14 +1124,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 tpd.indiceList.Add(uniqueIndices[i + 0]);
                 tpd.indiceList.Add(uniqueIndices[i + 1]);
                 tpd.indiceList.Add(uniqueIndices[i + 2]);
-                tpd.n = STL_Loader.getNormal(uniqueVertices[tpd.indiceList[0]], uniqueVertices[tpd.indiceList[1]], uniqueVertices[tpd.indiceList[2]]);
+                tpd.triangleIndex = i / 3;
                 tpd.ti1 = findIn2ArrayExcept(uniqueBoundTriangles[tpd.indiceList[0]], uniqueBoundTriangles[tpd.indiceList[1]], i / 3);
                 tpd.ti2 = findIn2ArrayExcept(uniqueBoundTriangles[tpd.indiceList[1]], uniqueBoundTriangles[tpd.indiceList[2]], i / 3);
                 tpd.ti3 = findIn2ArrayExcept(uniqueBoundTriangles[tpd.indiceList[2]], uniqueBoundTriangles[tpd.indiceList[0]], i / 3);
                 data.Add(tpd);
 
                 // Report Progress
-                if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
+                if ((uniqueIndices.Count > slice) && ((i % slice) == 0))
                 {
                     thisWorker.ReportProgress((50 * i) / uniqueIndices.Count);
 
@@ -1107,7 +1139,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     if (thisWorker.CancellationPending == true)
                     {
                         e.Cancel = true;
-                        break;
+                        _BGW_EF_resetEvent.Set();
+                        return;
                     }
                 }
             }
@@ -1123,8 +1156,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     {
                         I1 = edgesIndices[0],
                         I2 = edgesIndices[1],
-                        N1 = data[i].n,
-                        N2 = data[data[i].ti1[0]].n
+                        T1 = data[i].triangleIndex,
+                        T2 = data[data[i].ti1[0]].triangleIndex
                     };
                     edges.Add(nes);
 
@@ -1137,8 +1170,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     {
                         I1 = edgesIndices[0],
                         I2 = edgesIndices[1],
-                        N1 = data[i].n,
-                        N2 = data[data[i].ti2[0]].n
+                        T1 = data[i].triangleIndex,
+                        T2 = data[data[i].ti2[0]].triangleIndex
                     };
                     edges.Add(nes);
                 }
@@ -1150,14 +1183,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     {
                         I1 = edgesIndices[0],
                         I2 = edgesIndices[1],
-                        N1 = data[i].n,
-                        N2 = data[data[i].ti3[0]].n
+                        T1 = data[i].triangleIndex,
+                        T2 = data[data[i].ti3[0]].triangleIndex
                     };
                     edges.Add(nes);
                 }
 
                 // Report Progress
-                if ((loader.Triangles.Count > slice) && ((i % slice) == 0))
+                if ((data.Count > slice) && ((i % slice) == 0))
                 {
                     thisWorker.ReportProgress(50 + (50 * i) / data.Count);
 
@@ -1165,7 +1198,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     if (thisWorker.CancellationPending == true)
                     {
                         e.Cancel = true;
-                        break;
+                        _BGW_EF_resetEvent.Set();
+                        return;
                     }
                 }
             }
