@@ -33,6 +33,7 @@ Build volume dimensions and default color can be set in the ".config" file.
   * 4.x OpenGL with shaders and VBO
   * WPF native 3D rendering context
   * AlgoOptimization
+
 Algorithms are now in nlogn and linear isntead of the naive n^2 implementation
 | Number of Polygons   | Unique vertex finding time (Old) | Unique vertex finding time (New) | Edge finding time (Old) | Edge finding time (New)
 |:---------------------|:----------:|:--------------------------:|:-----------------:|:-----------------:|
