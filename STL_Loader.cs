@@ -332,6 +332,32 @@ namespace STLViewer
             return res;
         }
 
+        public static float sqrlenXY(Vector3 p)
+        {
+            return (p.X * p.X) + (p.Y * p.Y);
+        }
+        public static float sqrlenXZ(Vector3 p)
+        {
+            return (p.X * p.X) + (p.Z * p.Z);
+        }
+        public static float sqrlenYZ(Vector3 p)
+        {
+            return (p.Y * p.Y) + (p.Z * p.Z);
+        }
+
+        public static float lenXY(Vector3 p)
+        {
+            return (float)Math.Sqrt((p.X * p.X) + (p.Y * p.Y));
+        }
+        public static float lenXZ(Vector3 p)
+        {
+            return (float)Math.Sqrt((p.X * p.X) + (p.Z * p.Z));
+        }
+        public static float lenYZ(Vector3 p)
+        {
+            return (float)Math.Sqrt((p.Y * p.Y) + (p.Z * p.Z));
+        }
+
         public BoundingBoxData getBondingBox()
         {
             var res = new BoundingBoxData

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Linq;
 
 using System.IO;
 using Shell32;
@@ -44,11 +45,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private int colList = -1; // color list
         private int defList = -1; // default list
-
+        private int holeList = -1;
         private int compList = -1; // compensated list
         private int outlineList = -1; // outline list
         private int outlineMode = 1; // 1 outline and mesh, 2 mesh only, 3 outline only
         private string status = "";
+        private string modString = "";
 
         // Compensation data
         public struct indiceStruct
@@ -126,6 +128,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private Vector4 defaultColor;
         private Color backColor;
         private Vector4 edgeColor = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+        private Vector4 holeColor = new Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 
         private bool wiremode = false;
 
@@ -169,6 +172,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             trackBarX.BackColor = backColor;
             trackBarY.BackColor = backColor;
             trackBarZ.BackColor = backColor;
+            centerCompTrackBar.BackColor = backColor;
+            centerLimitTrackBar.BackColor = backColor;
 
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
@@ -320,6 +325,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             wiremode = false;
             Console.WriteLine("model loaded in " + (perfCount.ElapsedMilliseconds - loadStart));
             compCtrlPanel.Hide();
+            holeCompPanel.Hide();
 
             if (loader?.Triangles.Count > 0)
             {
@@ -428,7 +434,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
                 if (loader?.Triangles.Count > 0)
                 {
-                    if ((compList > 0) && compCtrlPanel.Visible)
+                    if ((compList > 0) && (compCtrlPanel.Visible || holeCompPanel.Visible))
                     {
                         if (wiremode)
                         {
@@ -442,6 +448,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                             GL.Disable(EnableCap.DepthTest);
                             GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
                             GL.CallList((originalColors) ? colList : defList);
+                            if (holeCompPanel.Visible)
+                            {
+                                GL.LineWidth(3.0f);
+                                GL.Disable(EnableCap.Lighting);
+                                GL.CallList(holeList);
+                                GL.Enable(EnableCap.Lighting);
+                                GL.LineWidth(1.0f);
+                            }
                             GL.Enable(EnableCap.DepthTest);
 
                             if (OutlineReady)
@@ -513,15 +527,23 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 label2.Visible = !label2.Visible;
             }
 
-            if (e.KeyCode == Keys.F12) // Toggle Model Compensation
+            if (e.KeyCode == Keys.F12) // Toggle Surface Compensation
             {
+                holeCompPanel.Visible = false;
                 if (!compCtrlPanel.Visible && UniqueVerticesReady)
                 {
                     compCtrlPanel.Visible = true;
                 }
                 else compCtrlPanel.Visible = false;
-
-
+            }
+            if (e.KeyCode == Keys.F11) // Toggle Hole Compensation
+            {
+                compCtrlPanel.Visible = false;
+                if (!holeCompPanel.Visible && UniqueVerticesReady)
+                {
+                    holeCompPanel.Visible = true;
+                }
+                else holeCompPanel.Visible = false;
             }
             if ((e.KeyCode == Keys.S) && e.Control) // Save Compensated model
             {
@@ -534,7 +556,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     }
                     try
                     {
-                        var fn = Path.GetFileNameWithoutExtension(currentFile) + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + " x" + (100 * trackBarX.Value / 40).ToString("D3") + "y" + (100 * trackBarY.Value / 40).ToString("D3") + "z" + (100 * trackBarZ.Value / 40).ToString("D3") + ".stl";
+                        var fn = Path.GetFileNameWithoutExtension(currentFile) + " " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss") + " " + modString + ".stl";
                         label1.Text = "Writing to " + fn;
                         stlw.writeToFile(fn, true);
                     }
@@ -561,7 +583,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
             if (e.KeyCode == Keys.Right) // Next model in folder
             {
+                if (this.ActiveControl != null) { 
+                    string tag = "";
+                    if (this.ActiveControl.Tag != null) tag = (string)this.ActiveControl.Tag;
+                    if (tag == "NoLR") return;
+                }
+
                 compCtrlPanel.Hide();
+                holeCompPanel.Hide();
                 currentIndex++;
                 if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                 else if (dirList.Count > 0)
@@ -573,7 +602,15 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             if (e.KeyCode == Keys.Left) // Previous model in folder
             {
+                if (this.ActiveControl != null)
+                {
+                    string tag = "";
+                    if (this.ActiveControl.Tag != null) tag = (string)this.ActiveControl.Tag;
+                    if (tag == "NoRL") return;
+                }
+
                 compCtrlPanel.Hide();
+                holeCompPanel.Hide();
                 currentIndex--;
                 if (currentIndex < 0) currentIndex = 0;
                 else if (dirList.Count > 0)
@@ -586,6 +623,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (e.KeyCode == Keys.Delete)  // Delete model file (after confirmation dialog)
             {
                 compCtrlPanel.Hide();
+                holeCompPanel.Hide();
                 if (MessageBox.Show(this, "Delete current file ?", "Warning", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK)
                 {
                     RecyclingBin.MoveHere(basePath + currentFile);
@@ -763,96 +801,96 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void trackBar1_ValueChanged(object sender, EventArgs e)
         {
-            if (compCtrlPanel.Visible)
+            if (!compCtrlPanel.Visible) return;
+
+
+            // recomp with new value and reset all data and list
+            var offsetX = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
+            var offsetY = trackBarY.Value / 40.0f / 2.0f;
+            var offsetZ = trackBarZ.Value / 40.0f / 2.0f;
+            label1.Text = "Total compensation (mm) X:" + (2.0f* offsetX).ToString("F3") + " Y:" + (2.0f * offsetY).ToString("F3") + " Z:" + (2.0f * offsetZ).ToString("F3");
+            modString = " x" + (100 * trackBarX.Value / 40).ToString("D3") + "y" + (100 * trackBarY.Value / 40).ToString("D3") + "z" + (100 * trackBarZ.Value / 40).ToString("D3");
+            // Prep opt and compare data
+            var uniqueVertexOffsets = new Vector3[uniqueVertices.Count];
+            var uniqueVertexOffsetsNeg = new Vector3[uniqueVertices.Count];
+            var uniqueVertexOffsetsPos = new Vector3[uniqueVertices.Count];
+
+            // compensate for offset, find longest normal in offset direction
+            for (var i = 0; i < loader.Triangles.Count; ++i)
             {
-                // recomp with new value and reset all data and list
-                var offsetX = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
-                var offsetY = trackBarY.Value / 40.0f / 2.0f;
-                var offsetZ = trackBarZ.Value / 40.0f / 2.0f;
-                label1.Text = "Total compensation (mm) X:" + (2.0f* offsetX).ToString("F3") + " Y:" + (2.0f * offsetY).ToString("F3") + " Z:" + (2.0f * offsetZ).ToString("F3");
-
-                // Prep opt and compare data
-                var uniqueVertexOffsets = new Vector3[uniqueVertices.Count];
-                var uniqueVertexOffsetsNeg = new Vector3[uniqueVertices.Count];
-                var uniqueVertexOffsetsPos = new Vector3[uniqueVertices.Count];
-
-                // compensate for offset, find longest normal in offset direction
-                for (var i = 0; i < loader.Triangles.Count; ++i)
+                // X
+                if (loader.Triangles[i].Normal.X > 0.0f)
                 {
-                    // X
-                    if (loader.Triangles[i].Normal.X > 0.0f)
-                    {
-                        if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I1].X) uniqueVertexOffsetsPos[faceIndices[i].I1].X = loader.Triangles[i].Normal.X;
-                        if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I2].X) uniqueVertexOffsetsPos[faceIndices[i].I2].X = loader.Triangles[i].Normal.X;
-                        if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I3].X) uniqueVertexOffsetsPos[faceIndices[i].I3].X = loader.Triangles[i].Normal.X;
-                    }
-                    else
-                    {
-                        if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I1].X) uniqueVertexOffsetsNeg[faceIndices[i].I1].X = loader.Triangles[i].Normal.X;
-                        if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I2].X) uniqueVertexOffsetsNeg[faceIndices[i].I2].X = loader.Triangles[i].Normal.X;
-                        if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I3].X) uniqueVertexOffsetsNeg[faceIndices[i].I3].X = loader.Triangles[i].Normal.X;
-                    }
-
-                    // Y
-                    if (loader.Triangles[i].Normal.Y > 0.0f)
-                    {
-                        if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I1].Y) uniqueVertexOffsetsPos[faceIndices[i].I1].Y = loader.Triangles[i].Normal.Y;
-                        if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I2].Y) uniqueVertexOffsetsPos[faceIndices[i].I2].Y = loader.Triangles[i].Normal.Y;
-                        if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I3].Y) uniqueVertexOffsetsPos[faceIndices[i].I3].Y = loader.Triangles[i].Normal.Y;
-                    }
-                    else
-                    {
-                        if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I1].Y) uniqueVertexOffsetsNeg[faceIndices[i].I1].Y = loader.Triangles[i].Normal.Y;
-                        if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I2].Y) uniqueVertexOffsetsNeg[faceIndices[i].I2].Y = loader.Triangles[i].Normal.Y;
-                        if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I3].Y) uniqueVertexOffsetsNeg[faceIndices[i].I3].Y = loader.Triangles[i].Normal.Y;
-                    }
-
-                    // Z
-                    if (loader.Triangles[i].Normal.Z > 0.0f)
-                    {
-                        if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I1].Z) uniqueVertexOffsetsPos[faceIndices[i].I1].Z = loader.Triangles[i].Normal.Z;
-                        if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I2].Z) uniqueVertexOffsetsPos[faceIndices[i].I2].Z = loader.Triangles[i].Normal.Z;
-                        if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I3].Z) uniqueVertexOffsetsPos[faceIndices[i].I3].Z = loader.Triangles[i].Normal.Z;
-                    }
-                    else
-                    {
-                        if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I1].Z) uniqueVertexOffsetsNeg[faceIndices[i].I1].Z = loader.Triangles[i].Normal.Z;
-                        if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I2].Z) uniqueVertexOffsetsNeg[faceIndices[i].I2].Z = loader.Triangles[i].Normal.Z;
-                        if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I3].Z) uniqueVertexOffsetsNeg[faceIndices[i].I3].Z = loader.Triangles[i].Normal.Z;
-                    }
+                    if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I1].X) uniqueVertexOffsetsPos[faceIndices[i].I1].X = loader.Triangles[i].Normal.X;
+                    if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I2].X) uniqueVertexOffsetsPos[faceIndices[i].I2].X = loader.Triangles[i].Normal.X;
+                    if (loader.Triangles[i].Normal.X > uniqueVertexOffsetsPos[faceIndices[i].I3].X) uniqueVertexOffsetsPos[faceIndices[i].I3].X = loader.Triangles[i].Normal.X;
+                }
+                else
+                {
+                    if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I1].X) uniqueVertexOffsetsNeg[faceIndices[i].I1].X = loader.Triangles[i].Normal.X;
+                    if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I2].X) uniqueVertexOffsetsNeg[faceIndices[i].I2].X = loader.Triangles[i].Normal.X;
+                    if (loader.Triangles[i].Normal.X < uniqueVertexOffsetsNeg[faceIndices[i].I3].X) uniqueVertexOffsetsNeg[faceIndices[i].I3].X = loader.Triangles[i].Normal.X;
                 }
 
-                // select final offset              
-                for (var i = 0; i < uniqueVertices.Count; ++i)
+                // Y
+                if (loader.Triangles[i].Normal.Y > 0.0f)
                 {
-                    uniqueVertexOffsets[i].X = offsetX * (uniqueVertexOffsetsPos[i].X + uniqueVertexOffsetsNeg[i].X);
-                    uniqueVertexOffsets[i].Y = offsetY * (uniqueVertexOffsetsPos[i].Y + uniqueVertexOffsetsNeg[i].Y);
-                    uniqueVertexOffsets[i].Z = offsetZ * (uniqueVertexOffsetsPos[i].Z + uniqueVertexOffsetsNeg[i].Z);
+                    if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I1].Y) uniqueVertexOffsetsPos[faceIndices[i].I1].Y = loader.Triangles[i].Normal.Y;
+                    if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I2].Y) uniqueVertexOffsetsPos[faceIndices[i].I2].Y = loader.Triangles[i].Normal.Y;
+                    if (loader.Triangles[i].Normal.Y > uniqueVertexOffsetsPos[faceIndices[i].I3].Y) uniqueVertexOffsetsPos[faceIndices[i].I3].Y = loader.Triangles[i].Normal.Y;
+                }
+                else
+                {
+                    if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I1].Y) uniqueVertexOffsetsNeg[faceIndices[i].I1].Y = loader.Triangles[i].Normal.Y;
+                    if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I2].Y) uniqueVertexOffsetsNeg[faceIndices[i].I2].Y = loader.Triangles[i].Normal.Y;
+                    if (loader.Triangles[i].Normal.Y < uniqueVertexOffsetsNeg[faceIndices[i].I3].Y) uniqueVertexOffsetsNeg[faceIndices[i].I3].Y = loader.Triangles[i].Normal.Y;
                 }
 
-                // apply offset to data
-                newData = new List<FaceData>(loader.Triangles.Count);
-                for (var i = 0; i < loader.Triangles.Count; ++i)
+                // Z
+                if (loader.Triangles[i].Normal.Z > 0.0f)
                 {
-                    newData.Add(new FaceData
-                    {
-                        V1 = loader.Triangles[i].V1 + uniqueVertexOffsets[faceIndices[i].I1],
-                        V2 = loader.Triangles[i].V2 + uniqueVertexOffsets[faceIndices[i].I2],
-                        V3 = loader.Triangles[i].V3 + uniqueVertexOffsets[faceIndices[i].I3],
-                        Normal = loader.Triangles[i].Normal,
-                        Color = loader.Triangles[i].Color
-                    });
+                    if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I1].Z) uniqueVertexOffsetsPos[faceIndices[i].I1].Z = loader.Triangles[i].Normal.Z;
+                    if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I2].Z) uniqueVertexOffsetsPos[faceIndices[i].I2].Z = loader.Triangles[i].Normal.Z;
+                    if (loader.Triangles[i].Normal.Z > uniqueVertexOffsetsPos[faceIndices[i].I3].Z) uniqueVertexOffsetsPos[faceIndices[i].I3].Z = loader.Triangles[i].Normal.Z;
                 }
-
-                // create render list
-                GL.DeleteLists(compList, 1);
-
-                compList = GL.GenLists(1);
-                GL.NewList(compList, ListMode.Compile);
-                drawModel(!false, loader.Triangles.Count, newData);
-                GL.EndList();
-                //Console.WriteLine("Gen model compList data yields " + GL.GetError());
+                else
+                {
+                    if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I1].Z) uniqueVertexOffsetsNeg[faceIndices[i].I1].Z = loader.Triangles[i].Normal.Z;
+                    if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I2].Z) uniqueVertexOffsetsNeg[faceIndices[i].I2].Z = loader.Triangles[i].Normal.Z;
+                    if (loader.Triangles[i].Normal.Z < uniqueVertexOffsetsNeg[faceIndices[i].I3].Z) uniqueVertexOffsetsNeg[faceIndices[i].I3].Z = loader.Triangles[i].Normal.Z;
+                }
             }
+
+            // select final offset              
+            for (var i = 0; i < uniqueVertices.Count; ++i)
+            {
+                uniqueVertexOffsets[i].X = offsetX * (uniqueVertexOffsetsPos[i].X + uniqueVertexOffsetsNeg[i].X);
+                uniqueVertexOffsets[i].Y = offsetY * (uniqueVertexOffsetsPos[i].Y + uniqueVertexOffsetsNeg[i].Y);
+                uniqueVertexOffsets[i].Z = offsetZ * (uniqueVertexOffsetsPos[i].Z + uniqueVertexOffsetsNeg[i].Z);
+            }
+
+            // apply offset to data
+            newData = new List<FaceData>(loader.Triangles.Count);
+            for (var i = 0; i < loader.Triangles.Count; ++i)
+            {
+                newData.Add(new FaceData
+                {
+                    V1 = loader.Triangles[i].V1 + uniqueVertexOffsets[faceIndices[i].I1],
+                    V2 = loader.Triangles[i].V2 + uniqueVertexOffsets[faceIndices[i].I2],
+                    V3 = loader.Triangles[i].V3 + uniqueVertexOffsets[faceIndices[i].I3],
+                    Normal = loader.Triangles[i].Normal,
+                    Color = loader.Triangles[i].Color
+                });
+            }
+
+            // create render list
+            GL.DeleteLists(compList, 1);
+
+            compList = GL.GenLists(1);
+            GL.NewList(compList, ListMode.Compile);
+            drawModel(!false, loader.Triangles.Count, newData);
+            GL.EndList();
+            //Console.WriteLine("Gen model compList data yields " + GL.GetError());
 
             ReDraw();
         }
@@ -1102,11 +1140,15 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private List<int> findIn2Array(List<int> a, List<int> b)
         {
-            return a.FindAll((elem) => b.Contains(elem));
+            return a.AsParallel().Where( elem => b.Contains(elem)).ToList(); 
+        }
+        private List<int> findIn2ArrayExcept_par(List<int> a, List<int> b, int exception)
+        {
+            return a.AsParallel().Where(elem => ((elem != exception) && b.Contains(elem))).ToList();
         }
         private List<int> findIn2ArrayExcept(List<int> a, List<int> b, int exception)
         {
-            return a.FindAll((elem) => ((elem != exception) && b.Contains(elem)) );
+            return a.FindAll(elem => ((elem != exception) && b.Contains(elem)));
         }
 
         private void backgroundWorker_Outline_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
@@ -1116,6 +1158,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             loadStart = perfCount.ElapsedMilliseconds;
 
             var data = new List<trianglePackedData>();
+           
 
             // prepare data
             for (var i = 0; i < uniqueIndices.Count; i += 3)
@@ -1259,6 +1302,136 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void renderPanel_Paint(object sender, PaintEventArgs e)
         {
+            ReDraw();
+        }
+
+        private float sqlenSelector(Vector3 v)
+        {
+            if (holeAxisRadioButtonX.Checked) return STL_Loader.sqrlenYZ(v);
+            if (holeAxisRadioButtonY.Checked) return STL_Loader.sqrlenXZ(v);
+            if (holeAxisRadioButtonZ.Checked) return STL_Loader.sqrlenXY(v);
+            return 0.0f;
+        }
+        private void centerTrackBar_ValueChanged(object sender, EventArgs e)
+        {
+            if (!holeCompPanel.Visible) return;
+
+            // recomp with new value and reset all data and list
+            var limit = centerLimitTrackBar.Value / 4.0f;
+            var comp = centerCompTrackBar.Value / 200.0f;//+/- 40 steps for +/- 0.20
+
+            var axisString = "Y";
+            if (holeAxisRadioButtonX.Checked) axisString = "X";
+            if (holeAxisRadioButtonY.Checked) axisString = "Y";
+            if (holeAxisRadioButtonZ.Checked) axisString = "Z";
+
+            label1.Text = "Center hole radius limit:" + limit.ToString("F3") + " " + axisString + " Comp:" + comp.ToString("F3");
+            modString = axisString + " L" + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C" + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
+
+            var limitsq = limit * limit; // srq
+            Vector3 scale = new Vector3(1.0f + comp, 1.0f + comp, 1.0f + comp);
+            if (holeAxisRadioButtonX.Checked) scale.X = 1.0f;
+            if (holeAxisRadioButtonY.Checked) scale.Y = 1.0f;
+            if (holeAxisRadioButtonZ.Checked) scale.Z = 1.0f;
+
+            // apply offset to data
+            newData = new List<FaceData>(loader.Triangles.Count);
+            for (var i = 0; i < loader.Triangles.Count; ++i)
+            {
+                newData.Add(new FaceData
+                {
+                    V1 = ((sqlenSelector(loader.Triangles[i].V1 + modelPos) > limitsq) ? loader.Triangles[i].V1 : (loader.Triangles[i].V1 * scale)),
+                    V2 = ((sqlenSelector(loader.Triangles[i].V2 + modelPos) > limitsq) ? loader.Triangles[i].V2 : (loader.Triangles[i].V2 * scale)),
+                    V3 = ((sqlenSelector(loader.Triangles[i].V3 + modelPos) > limitsq) ? loader.Triangles[i].V3 : (loader.Triangles[i].V3 * scale)),
+                    Normal = loader.Triangles[i].Normal,
+                    Color = loader.Triangles[i].Color
+                });
+            }
+
+            // create render list
+            GL.DeleteLists(compList, 1);
+            compList = GL.GenLists(1);
+            GL.NewList(compList, ListMode.Compile);
+            drawModel(!false, loader.Triangles.Count, newData);
+            GL.EndList();
+            //Console.WriteLine("Gen model compList data yields " + GL.GetError());
+
+
+            GL.DeleteLists(holeList, 1);
+            holeList = GL.GenLists(1);
+            GL.NewList(holeList, ListMode.Compile);
+            GL.Begin(PrimitiveType.Lines);
+
+           // GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, holeColor);
+           // GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, holeColor);
+            var maxOffset = bbData.maxY + 0.001f;
+            var midOffset = bbData.maxY / 2.0f;
+            var lowOffset = -0.001f;
+
+            for (var i = 0; i < 64; i++)
+            {
+                var s1 = limit * Math.Sin(2 * Math.PI * i / 64);
+                var c1 = limit * Math.Cos(2 * Math.PI * i / 64);
+
+                var s2 = limit * Math.Sin(2 * Math.PI * (i+1) / 64);
+                var c2 = limit * Math.Cos(2 * Math.PI * (i+1) / 64);
+
+                if (holeAxisRadioButtonX.Checked)
+                {
+                    GL.Color4(holeColor);
+                    GL.Vertex3(lowOffset, s1, c1);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(lowOffset, s2, c2);
+
+                    GL.Color4(holeColor);
+                    GL.Vertex3(midOffset, s1, c1);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(midOffset, s2, c2);
+
+                    GL.Color4(holeColor);
+                    GL.Vertex3(maxOffset, s1, c1);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(maxOffset, s2, c2);
+                }
+                if (holeAxisRadioButtonY.Checked)
+                {
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s1, lowOffset, c1);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s2, lowOffset, c2);
+
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s1, midOffset, c1);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s2, midOffset, c2);
+
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s1, maxOffset, c1);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s2, maxOffset, c2);
+                }
+                if (holeAxisRadioButtonZ.Checked)
+                {
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s1, c1, lowOffset);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s2, c2, lowOffset);
+
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s1, c1, midOffset);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s2, c2, midOffset);
+
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s1, c1, maxOffset);
+                    GL.Color4(holeColor);
+                    GL.Vertex3(s2, c2, maxOffset);
+                }
+
+            }
+            GL.End();
+            GL.EndList();
+
             ReDraw();
         }
     }
