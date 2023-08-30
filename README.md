@@ -11,7 +11,7 @@ Viewer for 3D STL files, classic image viewer controls, OpenGL
 ## Supports
 * Binary STL
 * ASCII STL
-* Color STL (per facet encoded in attribute word) 
+* Color STL (per facet encoded in attribute word)
 * Some oddball hybrid binary with ASCII header files
 
 ## Controls and features
@@ -22,6 +22,7 @@ Viewer for 3D STL files, classic image viewer controls, OpenGL
 * C to toggle default color vs model colors
 * W to toggle wireframe mode
 * Delete to move file to trash
+* F11 to activate "center feature" size compensation controls (Ctrl+S to save)
 * F12 to activate model compensation controls (Ctrl+S to save)
 
 ## Settings
@@ -34,14 +35,14 @@ Build volume dimensions and default color can be set in the ".config" file.
   * WPF native 3D rendering context
   * AlgoOptimization
 
-Algorithms are now in nlogn and linear isntead of the naive n^2 implementation
+Algorithms are now in O(nlog(n)) and linear instead of the naive O(n^2) implementation
 | Number of Polygons   | Unique vertex finding time (Old) | Unique vertex finding time (New) | Edge finding time (Old) | Edge finding time (New)
 |:---------------------|:----------:|:--------------------------:|:-----------------:|:-----------------:|
 | 28   | 111ms | 113ms | 1ms   | 2ms   |
 | 1K   | 16ms  | 41ms  | 25ms  | 4ms   |
-| 2K   | 87ms  | 38ms  | 48ms  | 42ms  |
+| 2K   | 87ms  | 38ms  | 48ms  | 9m s  |
 | 5K   | 113ms | 122ms | 281ms | 15ms  |
-| 10K  | 322ms | 100ms | 1.3s  | 44ms  | 
+| 10K  | 322ms | 100ms | 1.3s  | 44ms  |
 | 58K  | 9.2s  | 205ms | 29.3s | 286ms |
 | 100K | 26.7s | 313ms | 2.1m  | 474ms |
 | 357K | 5.8m  | 1.3s  | 31.8m | 1.8s  |
@@ -49,4 +50,4 @@ Algorithms are now in nlogn and linear isntead of the naive n^2 implementation
 | 1.2M | N/A   | 12.3s | N/A   | 5.7s  |
 | 2.0M | N/A   | 32.3s | N/A   | 13.0s |
 | 3.0M | N/A   | 86.5s | N/A   | 33.2s |
- 
+
