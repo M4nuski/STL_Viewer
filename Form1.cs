@@ -899,9 +899,10 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             GL.DeleteLists(outlineList, 1);
 
+            var stepTime0 = perfCount.ElapsedMilliseconds;     
+            
             outlineList = GL.GenLists(1);
             GL.NewList(outlineList, ListMode.Compile);
-
 
             GL.Begin(PrimitiveType.Lines);
             for (var i = 0; i < edges.Count; i++)
@@ -922,6 +923,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             GL.End();
             GL.EndList();
+
+            Console.WriteLine("Outline: edge GL list done in " + (perfCount.ElapsedMilliseconds - stepTime0));
 
             Console.WriteLine("Gen outlines list data yields " + GL.GetError());
         }
@@ -1153,15 +1156,17 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             _BGW_UV_resetEvent.Set();
         }
 
-        private List<int> findIn2Array(List<int> a, List<int> b)
+        private static List<int> findIn2Array(List<int> a, List<int> b)
         {
-            return a.AsParallel().Where( elem => b.Contains(elem)).ToList(); 
+            //return a.AsParallel().Where( elem => b.Contains(elem)).ToList();
+            return a.Where(elem => b.Contains(elem)).ToList();
         }
-        private List<int> findIn2ArrayExcept_par(List<int> a, List<int> b, int exception)
+        private static List<int> findIn2ArrayExcept_par(List<int> a, List<int> b, int exception)
         {
-            return a.AsParallel().Where(elem => ((elem != exception) && b.Contains(elem))).ToList();
+            //return a.AsParallel().Where(elem => ((elem != exception) && b.Contains(elem))).ToList();
+            return a.Where(elem => ((elem != exception) && b.Contains(elem))).ToList();
         }
-        private List<int> findIn2ArrayExcept(List<int> a, List<int> b, int exception)
+        private static List<int> findIn2ArrayExcept(List<int> a, List<int> b, int exception)
         {
             return a.FindAll(elem => ((elem != exception) && b.Contains(elem)));
         }
@@ -1202,6 +1207,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     }
                 }
             }
+
+            var stepTime0 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-EF: prepared trianglePackedData in " + (stepTime0 - loadStart));
 
             // fill edge data ignoring orphan edges (would imply an open hull not suitable for 3D printing)
             for (var i = 0; i < data.Count; ++i)
@@ -1261,6 +1269,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     }
                 }
             }
+
+            var stepTime1 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-EF: filled edge data in " + (stepTime1 - stepTime0));
 
             _BGW_EF_resetEvent.Set();
         }
