@@ -30,12 +30,17 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.renderPanel = new System.Windows.Forms.Panel();
-            this.compCtrlPanel = new System.Windows.Forms.Panel();
             this.holeCompPanel = new System.Windows.Forms.Panel();
+            this.label7 = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.holeCompModeComboBox = new System.Windows.Forms.ComboBox();
+            this.holeAxisRadioButtonY = new System.Windows.Forms.RadioButton();
+            this.holeAxisRadioButtonZ = new System.Windows.Forms.RadioButton();
+            this.holeAxisRadioButtonX = new System.Windows.Forms.RadioButton();
+            this.holeLimitModeComboBox = new System.Windows.Forms.ComboBox();
             this.centerCompTrackBar = new System.Windows.Forms.TrackBar();
             this.centerLimitTrackBar = new System.Windows.Forms.TrackBar();
-            this.label6 = new System.Windows.Forms.Label();
-            this.label7 = new System.Windows.Forms.Label();
+            this.compCtrlPanel = new System.Windows.Forms.Panel();
             this.trackBarX = new System.Windows.Forms.TrackBar();
             this.trackBarZ = new System.Windows.Forms.TrackBar();
             this.trackBarY = new System.Windows.Forms.TrackBar();
@@ -46,15 +51,11 @@
             this.label1 = new System.Windows.Forms.Label();
             this.backgroundWorker_UniqueVertex = new System.ComponentModel.BackgroundWorker();
             this.backgroundWorker_Outline = new System.ComponentModel.BackgroundWorker();
-            this.holeModeComboBox = new System.Windows.Forms.ComboBox();
-            this.holeAxisRadioButtonX = new System.Windows.Forms.RadioButton();
-            this.holeAxisRadioButtonZ = new System.Windows.Forms.RadioButton();
-            this.holeAxisRadioButtonY = new System.Windows.Forms.RadioButton();
             this.renderPanel.SuspendLayout();
-            this.compCtrlPanel.SuspendLayout();
             this.holeCompPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.centerCompTrackBar)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.centerLimitTrackBar)).BeginInit();
+            this.compCtrlPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarX)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarZ)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarY)).BeginInit();
@@ -77,6 +78,134 @@
             this.renderPanel.MouseMove += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseMove);
             this.renderPanel.MouseUp += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseUp);
             // 
+            // holeCompPanel
+            // 
+            this.holeCompPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.holeCompPanel.BackColor = System.Drawing.Color.Transparent;
+            this.holeCompPanel.Controls.Add(this.label7);
+            this.holeCompPanel.Controls.Add(this.label6);
+            this.holeCompPanel.Controls.Add(this.holeCompModeComboBox);
+            this.holeCompPanel.Controls.Add(this.holeAxisRadioButtonY);
+            this.holeCompPanel.Controls.Add(this.holeAxisRadioButtonZ);
+            this.holeCompPanel.Controls.Add(this.holeAxisRadioButtonX);
+            this.holeCompPanel.Controls.Add(this.holeLimitModeComboBox);
+            this.holeCompPanel.Controls.Add(this.centerCompTrackBar);
+            this.holeCompPanel.Controls.Add(this.centerLimitTrackBar);
+            this.holeCompPanel.Location = new System.Drawing.Point(4, 579);
+            this.holeCompPanel.Name = "holeCompPanel";
+            this.holeCompPanel.Size = new System.Drawing.Size(535, 102);
+            this.holeCompPanel.TabIndex = 6;
+            this.holeCompPanel.Visible = false;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(14, 66);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(34, 13);
+            this.label7.TabIndex = 14;
+            this.label7.Text = "Comp";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(20, 25);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(28, 13);
+            this.label6.TabIndex = 13;
+            this.label6.Text = "Limit";
+            // 
+            // holeCompModeComboBox
+            // 
+            this.holeCompModeComboBox.FormattingEnabled = true;
+            this.holeCompModeComboBox.Items.AddRange(new object[] {
+            "mm",
+            "PCT"});
+            this.holeCompModeComboBox.Location = new System.Drawing.Point(3, 80);
+            this.holeCompModeComboBox.Name = "holeCompModeComboBox";
+            this.holeCompModeComboBox.Size = new System.Drawing.Size(45, 21);
+            this.holeCompModeComboBox.TabIndex = 12;
+            this.holeCompModeComboBox.Text = "mm";
+            this.holeCompModeComboBox.SelectedValueChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
+            // 
+            // holeAxisRadioButtonY
+            // 
+            this.holeAxisRadioButtonY.AutoSize = true;
+            this.holeAxisRadioButtonY.Checked = true;
+            this.holeAxisRadioButtonY.Location = new System.Drawing.Point(92, 4);
+            this.holeAxisRadioButtonY.Name = "holeAxisRadioButtonY";
+            this.holeAxisRadioButtonY.Size = new System.Drawing.Size(32, 17);
+            this.holeAxisRadioButtonY.TabIndex = 11;
+            this.holeAxisRadioButtonY.TabStop = true;
+            this.holeAxisRadioButtonY.Tag = "Y";
+            this.holeAxisRadioButtonY.Text = "Y";
+            this.holeAxisRadioButtonY.UseVisualStyleBackColor = true;
+            this.holeAxisRadioButtonY.CheckedChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
+            // 
+            // holeAxisRadioButtonZ
+            // 
+            this.holeAxisRadioButtonZ.AutoSize = true;
+            this.holeAxisRadioButtonZ.Location = new System.Drawing.Point(130, 4);
+            this.holeAxisRadioButtonZ.Name = "holeAxisRadioButtonZ";
+            this.holeAxisRadioButtonZ.Size = new System.Drawing.Size(32, 17);
+            this.holeAxisRadioButtonZ.TabIndex = 10;
+            this.holeAxisRadioButtonZ.Tag = "Z";
+            this.holeAxisRadioButtonZ.Text = "Z";
+            this.holeAxisRadioButtonZ.UseVisualStyleBackColor = true;
+            this.holeAxisRadioButtonZ.CheckedChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
+            // 
+            // holeAxisRadioButtonX
+            // 
+            this.holeAxisRadioButtonX.AutoSize = true;
+            this.holeAxisRadioButtonX.Location = new System.Drawing.Point(54, 4);
+            this.holeAxisRadioButtonX.Name = "holeAxisRadioButtonX";
+            this.holeAxisRadioButtonX.Size = new System.Drawing.Size(32, 17);
+            this.holeAxisRadioButtonX.TabIndex = 9;
+            this.holeAxisRadioButtonX.Tag = "X";
+            this.holeAxisRadioButtonX.Text = "X";
+            this.holeAxisRadioButtonX.UseVisualStyleBackColor = true;
+            this.holeAxisRadioButtonX.CheckedChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
+            // 
+            // holeLimitModeComboBox
+            // 
+            this.holeLimitModeComboBox.FormattingEnabled = true;
+            this.holeLimitModeComboBox.Items.AddRange(new object[] {
+            "Max",
+            "Min"});
+            this.holeLimitModeComboBox.Location = new System.Drawing.Point(3, 39);
+            this.holeLimitModeComboBox.Name = "holeLimitModeComboBox";
+            this.holeLimitModeComboBox.Size = new System.Drawing.Size(45, 21);
+            this.holeLimitModeComboBox.TabIndex = 8;
+            this.holeLimitModeComboBox.Text = "Max";
+            this.holeLimitModeComboBox.SelectedValueChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
+            // 
+            // centerCompTrackBar
+            // 
+            this.centerCompTrackBar.AutoSize = false;
+            this.centerCompTrackBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.centerCompTrackBar.Location = new System.Drawing.Point(49, 66);
+            this.centerCompTrackBar.Maximum = 40;
+            this.centerCompTrackBar.Minimum = -40;
+            this.centerCompTrackBar.Name = "centerCompTrackBar";
+            this.centerCompTrackBar.Size = new System.Drawing.Size(480, 35);
+            this.centerCompTrackBar.TabIndex = 4;
+            this.centerCompTrackBar.Tag = "NoLR";
+            this.centerCompTrackBar.ValueChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
+            // 
+            // centerLimitTrackBar
+            // 
+            this.centerLimitTrackBar.AutoSize = false;
+            this.centerLimitTrackBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.centerLimitTrackBar.Location = new System.Drawing.Point(49, 25);
+            this.centerLimitTrackBar.Maximum = 400;
+            this.centerLimitTrackBar.Minimum = 1;
+            this.centerLimitTrackBar.Name = "centerLimitTrackBar";
+            this.centerLimitTrackBar.Size = new System.Drawing.Size(480, 35);
+            this.centerLimitTrackBar.TabIndex = 3;
+            this.centerLimitTrackBar.Tag = "NoLR";
+            this.centerLimitTrackBar.Value = 15;
+            this.centerLimitTrackBar.ValueChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
+            // 
             // compCtrlPanel
             // 
             this.compCtrlPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
@@ -92,71 +221,6 @@
             this.compCtrlPanel.Size = new System.Drawing.Size(510, 122);
             this.compCtrlPanel.TabIndex = 5;
             this.compCtrlPanel.Visible = false;
-            // 
-            // holeCompPanel
-            // 
-            this.holeCompPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.holeCompPanel.BackColor = System.Drawing.Color.Transparent;
-            this.holeCompPanel.Controls.Add(this.holeAxisRadioButtonY);
-            this.holeCompPanel.Controls.Add(this.holeAxisRadioButtonZ);
-            this.holeCompPanel.Controls.Add(this.holeAxisRadioButtonX);
-            this.holeCompPanel.Controls.Add(this.holeModeComboBox);
-            this.holeCompPanel.Controls.Add(this.centerCompTrackBar);
-            this.holeCompPanel.Controls.Add(this.centerLimitTrackBar);
-            this.holeCompPanel.Controls.Add(this.label6);
-            this.holeCompPanel.Controls.Add(this.label7);
-            this.holeCompPanel.Location = new System.Drawing.Point(4, 579);
-            this.holeCompPanel.Name = "holeCompPanel";
-            this.holeCompPanel.Size = new System.Drawing.Size(510, 102);
-            this.holeCompPanel.TabIndex = 6;
-            this.holeCompPanel.Visible = false;
-            // 
-            // centerCompTrackBar
-            // 
-            this.centerCompTrackBar.AutoSize = false;
-            this.centerCompTrackBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
-            this.centerCompTrackBar.Location = new System.Drawing.Point(27, 66);
-            this.centerCompTrackBar.Maximum = 40;
-            this.centerCompTrackBar.Minimum = -40;
-            this.centerCompTrackBar.Name = "centerCompTrackBar";
-            this.centerCompTrackBar.Size = new System.Drawing.Size(480, 35);
-            this.centerCompTrackBar.TabIndex = 4;
-            this.centerCompTrackBar.Tag = "NoLR";
-            this.centerCompTrackBar.ValueChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
-            // 
-            // centerLimitTrackBar
-            // 
-            this.centerLimitTrackBar.AutoSize = false;
-            this.centerLimitTrackBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
-            this.centerLimitTrackBar.Location = new System.Drawing.Point(27, 25);
-            this.centerLimitTrackBar.Maximum = 400;
-            this.centerLimitTrackBar.Minimum = 1;
-            this.centerLimitTrackBar.Name = "centerLimitTrackBar";
-            this.centerLimitTrackBar.Size = new System.Drawing.Size(480, 35);
-            this.centerLimitTrackBar.TabIndex = 3;
-            this.centerLimitTrackBar.Tag = "NoLR";
-            this.centerLimitTrackBar.Value = 15;
-            this.centerLimitTrackBar.ValueChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label6.Location = new System.Drawing.Point(4, 32);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(20, 24);
-            this.label6.TabIndex = 6;
-            this.label6.Text = "L";
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label7.Location = new System.Drawing.Point(2, 72);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(23, 24);
-            this.label7.TabIndex = 7;
-            this.label7.Text = "C";
             // 
             // trackBarX
             // 
@@ -271,57 +335,6 @@
             this.backgroundWorker_Outline.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.backgroundWorker_Outline_ProgressChanged);
             this.backgroundWorker_Outline.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorker_Outline_RunWorkerCompleted);
             // 
-            // holeModeComboBox
-            // 
-            this.holeModeComboBox.FormattingEnabled = true;
-            this.holeModeComboBox.Items.AddRange(new object[] {
-            "Max",
-            "Min"});
-            this.holeModeComboBox.Location = new System.Drawing.Point(3, 3);
-            this.holeModeComboBox.Name = "holeModeComboBox";
-            this.holeModeComboBox.Size = new System.Drawing.Size(45, 21);
-            this.holeModeComboBox.TabIndex = 8;
-            this.holeModeComboBox.Text = "Max";
-            this.holeModeComboBox.SelectedValueChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
-            // 
-            // holeAxisRadioButtonX
-            // 
-            this.holeAxisRadioButtonX.AutoSize = true;
-            this.holeAxisRadioButtonX.Location = new System.Drawing.Point(54, 4);
-            this.holeAxisRadioButtonX.Name = "holeAxisRadioButtonX";
-            this.holeAxisRadioButtonX.Size = new System.Drawing.Size(32, 17);
-            this.holeAxisRadioButtonX.TabIndex = 9;
-            this.holeAxisRadioButtonX.Tag = "X";
-            this.holeAxisRadioButtonX.Text = "X";
-            this.holeAxisRadioButtonX.UseVisualStyleBackColor = true;
-            this.holeAxisRadioButtonX.CheckedChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
-            // 
-            // holeAxisRadioButtonZ
-            // 
-            this.holeAxisRadioButtonZ.AutoSize = true;
-            this.holeAxisRadioButtonZ.Location = new System.Drawing.Point(130, 4);
-            this.holeAxisRadioButtonZ.Name = "holeAxisRadioButtonZ";
-            this.holeAxisRadioButtonZ.Size = new System.Drawing.Size(32, 17);
-            this.holeAxisRadioButtonZ.TabIndex = 10;
-            this.holeAxisRadioButtonZ.Tag = "Z";
-            this.holeAxisRadioButtonZ.Text = "Z";
-            this.holeAxisRadioButtonZ.UseVisualStyleBackColor = true;
-            this.holeAxisRadioButtonZ.CheckedChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
-            // 
-            // holeAxisRadioButtonY
-            // 
-            this.holeAxisRadioButtonY.AutoSize = true;
-            this.holeAxisRadioButtonY.Checked = true;
-            this.holeAxisRadioButtonY.Location = new System.Drawing.Point(92, 4);
-            this.holeAxisRadioButtonY.Name = "holeAxisRadioButtonY";
-            this.holeAxisRadioButtonY.Size = new System.Drawing.Size(32, 17);
-            this.holeAxisRadioButtonY.TabIndex = 11;
-            this.holeAxisRadioButtonY.TabStop = true;
-            this.holeAxisRadioButtonY.Tag = "Y";
-            this.holeAxisRadioButtonY.Text = "Y";
-            this.holeAxisRadioButtonY.UseVisualStyleBackColor = true;
-            this.holeAxisRadioButtonY.CheckedChanged += new System.EventHandler(this.centerTrackBar_ValueChanged);
-            // 
             // Form1
             // 
             this.AllowDrop = true;
@@ -342,12 +355,12 @@
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form1_KeyDown);
             this.renderPanel.ResumeLayout(false);
             this.renderPanel.PerformLayout();
-            this.compCtrlPanel.ResumeLayout(false);
-            this.compCtrlPanel.PerformLayout();
             this.holeCompPanel.ResumeLayout(false);
             this.holeCompPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.centerCompTrackBar)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.centerLimitTrackBar)).EndInit();
+            this.compCtrlPanel.ResumeLayout(false);
+            this.compCtrlPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarX)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarZ)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarY)).EndInit();
@@ -372,12 +385,13 @@
         private System.Windows.Forms.Panel holeCompPanel;
         private System.Windows.Forms.TrackBar centerCompTrackBar;
         private System.Windows.Forms.TrackBar centerLimitTrackBar;
-        private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.Label label7;
         private System.Windows.Forms.RadioButton holeAxisRadioButtonY;
         private System.Windows.Forms.RadioButton holeAxisRadioButtonZ;
         private System.Windows.Forms.RadioButton holeAxisRadioButtonX;
-        private System.Windows.Forms.ComboBox holeModeComboBox;
+        private System.Windows.Forms.ComboBox holeLimitModeComboBox;
+        private System.Windows.Forms.ComboBox holeCompModeComboBox;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Label label6;
     }
 }
 

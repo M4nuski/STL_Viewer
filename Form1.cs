@@ -913,7 +913,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, edgeColor);
 
                     var offset = (loader.Triangles[edges[i].T2].Normal + loader.Triangles[edges[i].T1].Normal);
-                    offset = offset * 0.005f;
+                    offset *= 0.005f;
 
                     GL.Vertex3(uniqueVertices[edges[i].I1] + offset);
                     GL.Vertex3(uniqueVertices[edges[i].I2] + offset);
@@ -1338,6 +1338,39 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (holeAxisRadioButtonZ.Checked) return STL_Loader.sqrlenXY(v);
             return 0.0f;
         }
+
+        private Vector3 changeLengthBy(Vector3 v, float comp)
+        {
+            if (holeAxisRadioButtonX.Checked)
+            {
+                var Vlen = STL_Loader.lenYZ(v);
+                if (Vlen < epsilon) return v;
+                var Nlen = Vlen + comp;
+                if (Nlen < 0.0f) return new Vector3(v.X, 0.0f, 0.0f);
+                var f = Nlen / Vlen;
+                return new Vector3(v.X, v.Y * f, v.Z * f);
+            }
+            if (holeAxisRadioButtonY.Checked)
+            {
+                var Vlen = STL_Loader.lenXZ(v);
+                if (Vlen < epsilon) return v;
+                var Nlen = Vlen + comp;
+                if (Nlen < 0.0f) return new Vector3(0.0f, v.Y, 0.0f);
+                var f = Nlen / Vlen;
+                return new Vector3(v.X * f, v.Y, v.Z * f);
+            }
+            if (holeAxisRadioButtonZ.Checked)
+            {
+                var Vlen = STL_Loader.lenXY(v);
+                if (Vlen < epsilon) return v;
+                var Nlen = Vlen + comp;
+                if (Nlen < 0.0f) return new Vector3(0.0f, 0.0f, v.Z);
+                var f = Nlen / Vlen;
+                return new Vector3(v.X * f, v.Y * f, v.Z);
+            }
+            return v;
+        }
+
         private void centerTrackBar_ValueChanged(object sender, EventArgs e)
         {
             if (!holeCompPanel.Visible) return;
@@ -1345,6 +1378,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             // recomp with new value and reset all data and list
             var limit = centerLimitTrackBar.Value / 4.0f;
             var comp = centerCompTrackBar.Value / 200.0f;//+/- 40 steps for +/- 0.20
+            if (holeCompModeComboBox.Text == "mm") comp *= 10.0f;
 
             var axisString = "Y";
             if (holeAxisRadioButtonX.Checked) axisString = "X";
@@ -1352,23 +1386,55 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (holeAxisRadioButtonZ.Checked) axisString = "Z";
 
             label1.Text = "Center hole radius limit:" + limit.ToString("F3") + " " + axisString + " Comp:" + comp.ToString("F3");
-            modString = axisString + " L" + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C" + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
+            modString = axisString + " L" + holeLimitModeComboBox.Text + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C " + holeCompModeComboBox.Text + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
 
-            var limitsq = limit * limit; // srq
-            Vector3 scale = new Vector3(1.0f + comp, 1.0f + comp, 1.0f + comp);
-            if (holeAxisRadioButtonX.Checked) scale.X = 1.0f;
-            if (holeAxisRadioButtonY.Checked) scale.Y = 1.0f;
-            if (holeAxisRadioButtonZ.Checked) scale.Z = 1.0f;
-
-            // apply offset to data
+            // prep new data
             newData = new List<FaceData>(loader.Triangles.Count);
-            for (var i = 0; i < loader.Triangles.Count; ++i)
+            var yOffset = bbData.maxY / 2.0f;
+
+            if (holeCompModeComboBox.Text == "PCT")
             {
-                newData.Add(new FaceData
-                {
+                var limitsq = limit * limit; // srq
+                Vector3 scale = new Vector3(1.0f + comp);
+                if (holeAxisRadioButtonX.Checked) scale.X = 1.0f;
+                if (holeAxisRadioButtonY.Checked) scale.Y = 1.0f;
+                if (holeAxisRadioButtonZ.Checked) scale.Z = 1.0f;
+
+                if (holeLimitModeComboBox.Text == "Max") for (var i = 0; i < loader.Triangles.Count; ++i) newData.Add(new FaceData
+                { 
                     V1 = (sqlenSelector(loader.Triangles[i].V1) > limitsq) ? loader.Triangles[i].V1 : (loader.Triangles[i].V1 * scale),
                     V2 = (sqlenSelector(loader.Triangles[i].V2) > limitsq) ? loader.Triangles[i].V2 : (loader.Triangles[i].V2 * scale),
                     V3 = (sqlenSelector(loader.Triangles[i].V3) > limitsq) ? loader.Triangles[i].V3 : (loader.Triangles[i].V3 * scale),
+                    Normal = loader.Triangles[i].Normal,
+                    Color = loader.Triangles[i].Color
+                });
+
+                if (holeLimitModeComboBox.Text == "Min") for (var i = 0; i < loader.Triangles.Count; ++i) newData.Add(new FaceData
+                {
+                    V1 = (sqlenSelector(loader.Triangles[i].V1) < limitsq) ? loader.Triangles[i].V1 : (loader.Triangles[i].V1 * scale),
+                    V2 = (sqlenSelector(loader.Triangles[i].V2) < limitsq) ? loader.Triangles[i].V2 : (loader.Triangles[i].V2 * scale),
+                    V3 = (sqlenSelector(loader.Triangles[i].V3) < limitsq) ? loader.Triangles[i].V3 : (loader.Triangles[i].V3 * scale),
+                    Normal = loader.Triangles[i].Normal,
+                    Color = loader.Triangles[i].Color
+                });
+            } else if (holeCompModeComboBox.Text == "mm")
+            {
+                var limitsq = limit * limit; // srq
+
+                if (holeLimitModeComboBox.Text == "Max") for (var i = 0; i < loader.Triangles.Count; ++i) newData.Add(new FaceData
+                {
+                    V1 = (sqlenSelector(loader.Triangles[i].V1) > limitsq) ? loader.Triangles[i].V1 : changeLengthBy(loader.Triangles[i].V1, comp),
+                    V2 = (sqlenSelector(loader.Triangles[i].V2) > limitsq) ? loader.Triangles[i].V2 : changeLengthBy(loader.Triangles[i].V2, comp),
+                    V3 = (sqlenSelector(loader.Triangles[i].V3) > limitsq) ? loader.Triangles[i].V3 : changeLengthBy(loader.Triangles[i].V3, comp),
+                    Normal = loader.Triangles[i].Normal,
+                    Color = loader.Triangles[i].Color
+                });
+
+                if (holeLimitModeComboBox.Text == "Min") for (var i = 0; i < loader.Triangles.Count; ++i) newData.Add(new FaceData
+                {
+                    V1 = (sqlenSelector(loader.Triangles[i].V1) < limitsq) ? loader.Triangles[i].V1 : changeLengthBy(loader.Triangles[i].V1, comp),
+                    V2 = (sqlenSelector(loader.Triangles[i].V2) < limitsq) ? loader.Triangles[i].V2 : changeLengthBy(loader.Triangles[i].V2, comp),
+                    V3 = (sqlenSelector(loader.Triangles[i].V3) < limitsq) ? loader.Triangles[i].V3 : changeLengthBy(loader.Triangles[i].V3, comp),
                     Normal = loader.Triangles[i].Normal,
                     Color = loader.Triangles[i].Color
                 });
@@ -1392,9 +1458,22 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
            // GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, holeColor);
             var maxOffset = bbData.maxY + 0.001f;
             var midOffset = bbData.maxY / 2.0f;
-            var lowOffset = -0.001f;
+            var lowOffset = -0.001f;            
 
-            for (var i = 0; i < 64; i++)
+            if (holeAxisRadioButtonX.Checked)
+            {
+                maxOffset = bbData.maxX + 0.001f;
+                midOffset = 0.001f;
+                lowOffset = bbData.minX - 0.001f;
+            }
+            if (holeAxisRadioButtonZ.Checked)
+            {
+                maxOffset = bbData.maxZ + 0.001f;
+                midOffset = 0.001f;
+                lowOffset = bbData.minZ - 0.001f;
+            }
+
+                for (var i = 0; i < 64; i++)
             {
                 var s1 = limit * Math.Sin(2 * Math.PI * i / 64);
                 var c1 = limit * Math.Cos(2 * Math.PI * i / 64);
@@ -1405,19 +1484,19 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 if (holeAxisRadioButtonX.Checked)
                 {
                     GL.Color4(holeColor);
-                    GL.Vertex3(lowOffset, s1, c1);
+                    GL.Vertex3(lowOffset, s1 + yOffset, c1);
                     GL.Color4(holeColor);
-                    GL.Vertex3(lowOffset, s2, c2);
+                    GL.Vertex3(lowOffset, s2 + yOffset, c2);
 
                     GL.Color4(holeColor);
-                    GL.Vertex3(midOffset, s1, c1);
+                    GL.Vertex3(midOffset, s1 + yOffset, c1);
                     GL.Color4(holeColor);
-                    GL.Vertex3(midOffset, s2, c2);
+                    GL.Vertex3(midOffset, s2 + yOffset, c2);
 
                     GL.Color4(holeColor);
-                    GL.Vertex3(maxOffset, s1, c1);
+                    GL.Vertex3(maxOffset, s1 + yOffset, c1);
                     GL.Color4(holeColor);
-                    GL.Vertex3(maxOffset, s2, c2);
+                    GL.Vertex3(maxOffset, s2 + yOffset, c2);
                 }
                 if (holeAxisRadioButtonY.Checked)
                 {
@@ -1439,19 +1518,19 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 if (holeAxisRadioButtonZ.Checked)
                 {
                     GL.Color4(holeColor);
-                    GL.Vertex3(s1, c1, lowOffset);
+                    GL.Vertex3(s1, c1 + yOffset, lowOffset);
                     GL.Color4(holeColor);
-                    GL.Vertex3(s2, c2, lowOffset);
+                    GL.Vertex3(s2, c2 + yOffset, lowOffset);
 
                     GL.Color4(holeColor);
-                    GL.Vertex3(s1, c1, midOffset);
+                    GL.Vertex3(s1, c1 + yOffset, midOffset);
                     GL.Color4(holeColor);
-                    GL.Vertex3(s2, c2, midOffset);
+                    GL.Vertex3(s2, c2 + yOffset, midOffset);
 
                     GL.Color4(holeColor);
-                    GL.Vertex3(s1, c1, maxOffset);
+                    GL.Vertex3(s1, c1 + yOffset, maxOffset);
                     GL.Color4(holeColor);
-                    GL.Vertex3(s2, c2, maxOffset);
+                    GL.Vertex3(s2, c2 + yOffset, maxOffset);
                 }
 
             }
