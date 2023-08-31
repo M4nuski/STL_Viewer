@@ -358,7 +358,7 @@ namespace STLViewer
             return (float)Math.Sqrt((p.Y * p.Y) + (p.Z * p.Z));
         }
 
-        public BoundingBoxData getBondingBox()
+        public BoundingBoxData getBoundingBox()
         {
             var res = new BoundingBoxData
             {

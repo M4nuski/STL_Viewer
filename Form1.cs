@@ -70,7 +70,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         public List<FaceData> newData;
         public indiceStruct[] faceIndices;
 
-        private readonly float epsilon = 0.01f;
+        private static readonly float epsilon = 0.01f;
         public List<Vector3> uniqueVertices = new List<Vector3>();
         public List<int> uniqueIndices;
         public List<List<int>> uniqueBoundTriangles;
@@ -271,7 +271,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             outlineMode = 1;
 
             loader.loadFile(basePath + currentFile, STL_Loader.NormalsRecalcMode.always);
-            bbData = loader.getBondingBox();
+            bbData = loader.getBoundingBox();
 
             // center model on platform
             var modelPos = new Vector3((bbData.maxX + bbData.minX) / -2.0f,
@@ -403,108 +403,105 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void ReDraw()
         {
-            if (WindowInfo != null)
-            {
+            if (WindowInfo == null) return;
 
-                // update pivot
-                var mrx = Matrix3.CreateRotationX(-rx * 0.01745f);
-                var mry = Matrix3.CreateRotationY(-ry * 0.01745f);
+            // update pivot
+            var mrx = Matrix3.CreateRotationX(-rx * 0.01745f);
+            var mry = Matrix3.CreateRotationY(-ry * 0.01745f);
 
-                var offset = new Vector3(px, py, 0.0f);
-                offset = Vector3.Transform(mrx, offset);
-                pivot += Vector3.Transform(mry, offset); // ang in radians
+            var offset = new Vector3(px, py, 0.0f);
+            offset = Vector3.Transform(mrx, offset);
+            pivot += Vector3.Transform(mry, offset); // ang in radians
 
-                // update light
-                offset = new Vector3(0.5f, 0.5f, 1.0f);
-                offset.Normalize();
-                offset = Vector3.Transform(mrx, offset);
-                offset = Vector3.Transform(mry, offset); // ang in radians
+            // update light
+            offset = new Vector3(0.5f, 0.5f, 1.0f);
+            offset.Normalize();
+            offset = Vector3.Transform(mrx, offset);
+            offset = Vector3.Transform(mry, offset); // ang in radians
 
-                GL.Light(LightName.Light0, LightParameter.Position, new Vector4(offset, 0.0f));
+            GL.Light(LightName.Light0, LightParameter.Position, new Vector4(offset, 0.0f));
 
-                px = 0.0f;
-                py = 0.0f;
+            px = 0.0f;
+            py = 0.0f;
 
-                // redraw
-                WindowContext.MakeCurrent(WindowInfo);
-                GL.Viewport(0, 0, renderPanel.Width, renderPanel.Height);
-                GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            // redraw
+            WindowContext.MakeCurrent(WindowInfo);
+            GL.Viewport(0, 0, renderPanel.Width, renderPanel.Height);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 
-                GL.MatrixMode(MatrixMode.Projection);
-                GL.LoadMatrix(pmat);
-                GL.Translate(0.0f, 0.0f, -pz);
-                GL.Rotate(rx, 1.0f, 0.0f, 0.0f); // ang in degrees
-                GL.Rotate(ry, 0.0f, 1.0f, 0.0f);
-                GL.Translate(pivot);
+            GL.MatrixMode(MatrixMode.Projection);
+            GL.LoadMatrix(pmat);
+            GL.Translate(0.0f, 0.0f, -pz);
+            GL.Rotate(rx, 1.0f, 0.0f, 0.0f); // ang in degrees
+            GL.Rotate(ry, 0.0f, 1.0f, 0.0f);
+            GL.Translate(pivot);
 
 
-                GL.MatrixMode(MatrixMode.Modelview);
-                GL.LoadIdentity();
+            GL.MatrixMode(MatrixMode.Modelview);
+            GL.LoadIdentity();
 
-                // build platform box
-                GL.Disable(EnableCap.Lighting);
-                drawBuildVolume();
-                GL.Enable(EnableCap.Lighting);
+            // build platform box
+            GL.Disable(EnableCap.Lighting);
+            drawBuildVolume();
+            GL.Enable(EnableCap.Lighting);
 
-                if (loader?.Triangles.Count > 0)
+            if (loader?.Triangles.Count > 0)
+            {
+                if ((compList > 0) && (compCtrlPanel.Visible || holeCompPanel.Visible))
                 {
-                    if ((compList > 0) && (compCtrlPanel.Visible || holeCompPanel.Visible))
+                    if (wiremode)
                     {
-                        if (wiremode)
-                        {
-                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-                            GL.CallList(compList);
-                        }
-                        else
-                        {
-                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-                            GL.CallList(compList);
-                            GL.Disable(EnableCap.DepthTest);
-                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-                            GL.CallList((originalColors) ? colList : defList);
-                            if (holeCompPanel.Visible)
-                            {
-                                GL.LineWidth(3.0f);
-                                GL.Disable(EnableCap.Lighting);
-                                GL.CallList(holeList);
-                                GL.Enable(EnableCap.Lighting);
-                                GL.LineWidth(1.0f);
-                            }
-                            GL.Enable(EnableCap.DepthTest);
-
-                            if (OutlineReady)
-                            {
-                                GL.LineWidth(3.0f);
-                                GL.CallList(outlineList);
-                                GL.LineWidth(1.0f);
-                            }
-                        }
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                        GL.CallList(compList);
                     }
                     else
                     {
-                        // 1 outline and mesh, 2 mesh only, 3 outline only
-                        if (outlineMode != 2)
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                        GL.CallList(compList);
+                        GL.Disable(EnableCap.DepthTest);
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                        GL.CallList((originalColors) ? colList : defList);
+                        if (holeCompPanel.Visible)
                         {
-                            if (OutlineReady)
-                            {
-                                GL.LineWidth(3.0f);
-                                GL.CallList(outlineList);
-                                GL.LineWidth(1.0f);
-                            }
+                            GL.LineWidth(3.0f);
+                            GL.Disable(EnableCap.Lighting);
+                            GL.CallList(holeList);
+                            GL.Enable(EnableCap.Lighting);
+                            GL.LineWidth(1.0f);
                         }
-                        if (outlineMode != 3)
-                        {                      
-                            GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
-                            GL.CallList((originalColors) ? colList : defList);
-                            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-                        }
+                        GL.Enable(EnableCap.DepthTest);
 
+                        if (OutlineReady)
+                        {
+                            GL.LineWidth(3.0f);
+                            GL.CallList(outlineList);
+                            GL.LineWidth(1.0f);
+                        }
                     }
-                }   
+                }
+                else
+                {
+                    // 1 outline and mesh, 2 mesh only, 3 outline only
+                    if (outlineMode != 2)
+                    {
+                        if (OutlineReady)
+                        {
+                            GL.LineWidth(3.0f);
+                            GL.CallList(outlineList);
+                            GL.LineWidth(1.0f);
+                        }
+                    }
+                    if (outlineMode != 3)
+                    {                      
+                        GL.PolygonMode(MaterialFace.FrontAndBack, wiremode ? PolygonMode.Line : PolygonMode.Fill);
+                        GL.CallList((originalColors) ? colList : defList);
+                        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+                    }
 
-                WindowContext.SwapBuffers();
+                }
+            }   
 
-            }
+            WindowContext.SwapBuffers();
         }
 
         private void setPerspective(float FOV, float AR, float Near, float Far)
@@ -794,6 +791,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            CancelBGW();
+            WindowInfo = null;
             GL.DeleteLists(colList, 1);
             GL.DeleteLists(defList, 1);
             GL.DeleteLists(compList, 1);
@@ -803,7 +802,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private void trackBar1_ValueChanged(object sender, EventArgs e)
         {
             if (!compCtrlPanel.Visible) return;
-
 
             // recomp with new value and reset all data and list
             var offsetX = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
@@ -961,7 +959,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             label1.Text = status + $"Analysing model {e.ProgressPercentage}%";
         }
 
-        private bool v3eq(Vector3 a, Vector3 b)
+        private static bool v3eq(Vector3 a, Vector3 b)
         {
             return (Math.Abs(a.X - b.X) < epsilon) && (Math.Abs(a.Y - b.Y) < epsilon) && (Math.Abs(a.Z - b.Z) < epsilon);
         }
@@ -973,11 +971,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             loadStart = perfCount.ElapsedMilliseconds;
 
             // prepare axis
-            var bbdata = loader.getBondingBox();
+            var bbdata = loader.getBoundingBox();
             Vector3 axis = new Vector3(bbdata.maxX - bbdata.minX, bbdata.maxY - bbdata.minY, bbdata.maxZ - bbdata.minZ);
             if (axis.Length < 0.01) axis = new Vector3(0.57735f);
             axis = Vector3.Normalize(axis);
 
+            // 
+            var stepTime0 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-UV: bb and axis done in " + (stepTime0 - loadStart));
             uniqueVertices.Clear();
             uniqueIndices = new List<int>(loader.Triangles.Count * 3);
             uniqueBoundTriangles = new List<List<int>>();
@@ -1030,10 +1031,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
             }
 
-
+            var stepTime1 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-UV: data unpacked in " + (stepTime1 - stepTime0));
 
             // sort along axis (using precalculated .distance)
             data.Sort();
+
+            stepTime0 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-UV: data sorted along axis in " + (stepTime0 - stepTime1));
 
             // Report Progress
             thisWorker.ReportProgress(40);
@@ -1075,6 +1080,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     }
                 }
 
+            stepTime1 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-UV: walked for uniques in " + (stepTime1 - stepTime0));
+
             // assign indices
             for (int i = 0; i < data.Count; ++i)
             {
@@ -1108,6 +1116,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 }
             }
 
+            stepTime0 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-UV: indices assigned in " + (stepTime0 - stepTime1));
+
             // extract indices
             for (int i = 0; i < data.Count; ++i)
             { 
@@ -1132,6 +1143,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     }
                 }
             }
+
+            stepTime1 = perfCount.ElapsedMilliseconds;
+            Console.WriteLine("BGW-UV: extracted indices in " + (stepTime1 - stepTime0));
 
             // Report Progress
             thisWorker.ReportProgress(100);
@@ -1251,7 +1265,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             _BGW_EF_resetEvent.Set();
         }
 
-        private void backgroundWorker_Outline_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
+        private void backgroundWorker_Outline_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             if (e.Cancelled == true)
             {
@@ -1277,7 +1291,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
         }
 
-        private void backgroundWorker_Outline_ProgressChanged(object sender, System.ComponentModel.ProgressChangedEventArgs e)
+        private void backgroundWorker_Outline_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             label1.Text = status + $"Generating outline {e.ProgressPercentage}%";
         }
