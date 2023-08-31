@@ -136,7 +136,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private Vector3 P1, P2, P3;
         private int MselectedP = 0; // 1 2 3
-        private bool Mselecting = false;
 
         public Form1()
         {
