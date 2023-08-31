@@ -332,30 +332,42 @@ namespace STLViewer
             return res;
         }
 
-        public static float sqrlenXY(Vector3 p)
+        public static float sqrlenXY(Vector3 p, float offsetX = 0.0f, float offsetY = 0.0f)
         {
-            return (p.X * p.X) + (p.Y * p.Y);
+            var x = p.X + offsetX;
+            var y = p.Y + offsetY;
+            return (x * x) + (y * y);
         }
-        public static float sqrlenXZ(Vector3 p)
+        public static float sqrlenXZ(Vector3 p, float offsetX = 0.0f, float offsetZ = 0.0f)
         {
-            return (p.X * p.X) + (p.Z * p.Z);
+            var x = p.X + offsetX;
+            var z = p.Z + offsetZ;
+            return (x * x) + (z * z);
         }
-        public static float sqrlenYZ(Vector3 p)
+        public static float sqrlenYZ(Vector3 p, float offsetY = 0.0f, float offsetZ = 0.0f)
         {
-            return (p.Y * p.Y) + (p.Z * p.Z);
+            var y = p.Y + offsetY;
+            var z = p.Z + offsetZ;
+            return (y * y) + (z * z);
         }
 
-        public static float lenXY(Vector3 p)
+        public static float lenXY(Vector3 p, float offsetX = 0.0f, float offsetY = 0.0f)
         {
-            return (float)Math.Sqrt((p.X * p.X) + (p.Y * p.Y));
+            var x = p.X + offsetX;
+            var y = p.Y + offsetY;
+            return (float)Math.Sqrt((x * x) + (y * y));
         }
-        public static float lenXZ(Vector3 p)
+        public static float lenXZ(Vector3 p, float offsetX = 0.0f, float offsetZ = 0.0f)
         {
-            return (float)Math.Sqrt((p.X * p.X) + (p.Z * p.Z));
+            var x = p.X + offsetX;
+            var z = p.Z + offsetZ;
+            return (float)Math.Sqrt((x * x) + (z * z));
         }
-        public static float lenYZ(Vector3 p)
+        public static float lenYZ(Vector3 p, float offsetY = 0.0f, float offsetZ = 0.0f)
         {
-            return (float)Math.Sqrt((p.Y * p.Y) + (p.Z * p.Z));
+            var y = p.Y + offsetY;
+            var z = p.Z + offsetZ;
+            return (float)Math.Sqrt((y * y) + (z * z));
         }
 
         public BoundingBoxData getBoundingBox()
