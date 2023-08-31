@@ -41,7 +41,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private string currentFile;
         private STL_Loader loader = new STL_Loader();
         private BoundingBoxData bbData;
-        private Vector3 modelPos;
 
         private int colList = -1; // color list
         private int defList = -1; // default list
@@ -275,9 +274,28 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             bbData = loader.getBondingBox();
 
             // center model on platform
-            modelPos = new Vector3((bbData.maxX + bbData.minX) / -2.0f,
+            var modelPos = new Vector3((bbData.maxX + bbData.minX) / -2.0f,
                 -bbData.minY,
                 (bbData.maxZ + bbData.minZ) / -2.0f);
+
+            // center model
+            for (var ti = 0; ti < loader.Triangles.Count; ++ti)
+            {
+                loader.Triangles[ti].V1 += modelPos;
+                loader.Triangles[ti].V2 += modelPos;
+                loader.Triangles[ti].V3 += modelPos;
+            }
+
+
+            // update bounding box data
+            bbData.minX += modelPos.X;
+            bbData.maxX += modelPos.X;
+
+            bbData.minY += modelPos.Y;
+            bbData.maxY += modelPos.Y;
+
+            bbData.minZ += modelPos.Z;
+            bbData.maxZ += modelPos.Z;
 
             // center view on model
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
@@ -330,7 +348,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (loader?.Triangles.Count > 0)
             {
                 Console.WriteLine("num vertex " + loader.Triangles.Count * 3);
-
                 // prep data for comp
                 faceIndices = new indiceStruct[loader.Triangles.Count];
                 uniqueVertices.Clear();
@@ -428,9 +445,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 GL.Disable(EnableCap.Lighting);
                 drawBuildVolume();
                 GL.Enable(EnableCap.Lighting);
-
-                // model
-                GL.Translate(modelPos);
 
                 if (loader?.Triangles.Count > 0)
                 {
@@ -583,14 +597,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
             if (e.KeyCode == Keys.Right) // Next model in folder
             {
-                if (this.ActiveControl != null) { 
-                    string tag = "";
-                    if (this.ActiveControl.Tag != null) tag = (string)this.ActiveControl.Tag;
-                    if (tag == "NoLR") return;
-                }
+                if ((compCtrlPanel.Visible) || (holeCompPanel.Visible)) return;
 
-                compCtrlPanel.Hide();
-                holeCompPanel.Hide();
                 currentIndex++;
                 if (currentIndex >= dirList.Count) currentIndex = dirList.Count - 1;
                 else if (dirList.Count > 0)
@@ -602,15 +610,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             if (e.KeyCode == Keys.Left) // Previous model in folder
             {
-                if (this.ActiveControl != null)
-                {
-                    string tag = "";
-                    if (this.ActiveControl.Tag != null) tag = (string)this.ActiveControl.Tag;
-                    if (tag == "NoRL") return;
-                }
+                if ((compCtrlPanel.Visible) || (holeCompPanel.Visible)) return;
 
-                compCtrlPanel.Hide();
-                holeCompPanel.Hide();
                 currentIndex--;
                 if (currentIndex < 0) currentIndex = 0;
                 else if (dirList.Count > 0)
@@ -1340,9 +1341,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             {
                 newData.Add(new FaceData
                 {
-                    V1 = ((sqlenSelector(loader.Triangles[i].V1 + modelPos) > limitsq) ? loader.Triangles[i].V1 : (loader.Triangles[i].V1 * scale)),
-                    V2 = ((sqlenSelector(loader.Triangles[i].V2 + modelPos) > limitsq) ? loader.Triangles[i].V2 : (loader.Triangles[i].V2 * scale)),
-                    V3 = ((sqlenSelector(loader.Triangles[i].V3 + modelPos) > limitsq) ? loader.Triangles[i].V3 : (loader.Triangles[i].V3 * scale)),
+                    V1 = (sqlenSelector(loader.Triangles[i].V1) > limitsq) ? loader.Triangles[i].V1 : (loader.Triangles[i].V1 * scale),
+                    V2 = (sqlenSelector(loader.Triangles[i].V2) > limitsq) ? loader.Triangles[i].V2 : (loader.Triangles[i].V2 * scale),
+                    V3 = (sqlenSelector(loader.Triangles[i].V3) > limitsq) ? loader.Triangles[i].V3 : (loader.Triangles[i].V3 * scale),
                     Normal = loader.Triangles[i].Normal,
                     Color = loader.Triangles[i].Color
                 });
