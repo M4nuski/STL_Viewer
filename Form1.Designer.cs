@@ -29,9 +29,9 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            this.renderPanel = new System.Windows.Forms.Panel();
-            this.panelP1 = new System.Windows.Forms.Panel();
             this.MesurementsPanel = new System.Windows.Forms.Panel();
+            this.comboBoxLEN2 = new System.Windows.Forms.ComboBox();
+            this.comboBoxLEN1 = new System.Windows.Forms.ComboBox();
             this.labelNOR123Z = new System.Windows.Forms.Label();
             this.labelNOR123Y = new System.Windows.Forms.Label();
             this.labelNOR123X = new System.Windows.Forms.Label();
@@ -91,11 +91,6 @@
             this.label1 = new System.Windows.Forms.Label();
             this.backgroundWorker_UniqueVertex = new System.ComponentModel.BackgroundWorker();
             this.backgroundWorker_Outline = new System.ComponentModel.BackgroundWorker();
-            this.panelP2 = new System.Windows.Forms.Panel();
-            this.panelP3 = new System.Windows.Forms.Panel();
-            this.comboBoxLEN1 = new System.Windows.Forms.ComboBox();
-            this.comboBoxLEN2 = new System.Windows.Forms.ComboBox();
-            this.renderPanel.SuspendLayout();
             this.MesurementsPanel.SuspendLayout();
             this.holeCompPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.centerCompTrackBar)).BeginInit();
@@ -106,39 +101,10 @@
             ((System.ComponentModel.ISupportInitialize)(this.trackBarY)).BeginInit();
             this.SuspendLayout();
             // 
-            // renderPanel
-            // 
-            this.renderPanel.BackColor = System.Drawing.Color.White;
-            this.renderPanel.Controls.Add(this.panelP3);
-            this.renderPanel.Controls.Add(this.panelP2);
-            this.renderPanel.Controls.Add(this.panelP1);
-            this.renderPanel.Controls.Add(this.MesurementsPanel);
-            this.renderPanel.Controls.Add(this.holeCompPanel);
-            this.renderPanel.Controls.Add(this.compCtrlPanel);
-            this.renderPanel.Controls.Add(this.label2);
-            this.renderPanel.Controls.Add(this.label1);
-            this.renderPanel.Location = new System.Drawing.Point(0, 0);
-            this.renderPanel.Name = "renderPanel";
-            this.renderPanel.Size = new System.Drawing.Size(1024, 720);
-            this.renderPanel.TabIndex = 0;
-            this.renderPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.renderPanel_Paint);
-            this.renderPanel.MouseDown += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseDown);
-            this.renderPanel.MouseLeave += new System.EventHandler(this.panel1_MouseLeave);
-            this.renderPanel.MouseMove += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseMove);
-            this.renderPanel.MouseUp += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseUp);
-            // 
-            // panelP1
-            // 
-            this.panelP1.BackColor = System.Drawing.Color.Transparent;
-            this.panelP1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelP1.Location = new System.Drawing.Point(446, 183);
-            this.panelP1.Name = "panelP1";
-            this.panelP1.Size = new System.Drawing.Size(8, 8);
-            this.panelP1.TabIndex = 11;
-            // 
             // MesurementsPanel
             // 
             this.MesurementsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.MesurementsPanel.BackColor = System.Drawing.SystemColors.Control;
             this.MesurementsPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.MesurementsPanel.Controls.Add(this.comboBoxLEN2);
             this.MesurementsPanel.Controls.Add(this.comboBoxLEN1);
@@ -179,10 +145,43 @@
             this.MesurementsPanel.Controls.Add(this.label9);
             this.MesurementsPanel.Controls.Add(this.label8);
             this.MesurementsPanel.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MesurementsPanel.Location = new System.Drawing.Point(713, 12);
+            this.MesurementsPanel.Location = new System.Drawing.Point(875, 4);
             this.MesurementsPanel.Name = "MesurementsPanel";
             this.MesurementsPanel.Size = new System.Drawing.Size(301, 273);
             this.MesurementsPanel.TabIndex = 8;
+            this.MesurementsPanel.Visible = false;
+            // 
+            // comboBoxLEN2
+            // 
+            this.comboBoxLEN2.FormattingEnabled = true;
+            this.comboBoxLEN2.Items.AddRange(new object[] {
+            "Point 1",
+            "Point 2",
+            "Point 3",
+            "MidPoint 1-2",
+            "MidPoint 2-3",
+            "MidPoint 3-1",
+            "Center 1-2-3"});
+            this.comboBoxLEN2.Location = new System.Drawing.Point(175, 222);
+            this.comboBoxLEN2.Name = "comboBoxLEN2";
+            this.comboBoxLEN2.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxLEN2.TabIndex = 47;
+            // 
+            // comboBoxLEN1
+            // 
+            this.comboBoxLEN1.FormattingEnabled = true;
+            this.comboBoxLEN1.Items.AddRange(new object[] {
+            "Point 1",
+            "Point 2",
+            "Point 3",
+            "MidPoint 1-2",
+            "MidPoint 2-3",
+            "MidPoint 3-1",
+            "Center 1-2-3"});
+            this.comboBoxLEN1.Location = new System.Drawing.Point(65, 222);
+            this.comboBoxLEN1.Name = "comboBoxLEN1";
+            this.comboBoxLEN1.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxLEN1.TabIndex = 46;
             // 
             // labelNOR123Z
             // 
@@ -511,7 +510,7 @@
             // holeCompPanel
             // 
             this.holeCompPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.holeCompPanel.BackColor = System.Drawing.Color.Transparent;
+            this.holeCompPanel.BackColor = System.Drawing.SystemColors.Control;
             this.holeCompPanel.Controls.Add(this.holeRefComboBox);
             this.holeCompPanel.Controls.Add(this.radioButton1);
             this.holeCompPanel.Controls.Add(this.label7);
@@ -523,7 +522,7 @@
             this.holeCompPanel.Controls.Add(this.holeLimitModeComboBox);
             this.holeCompPanel.Controls.Add(this.centerCompTrackBar);
             this.holeCompPanel.Controls.Add(this.centerLimitTrackBar);
-            this.holeCompPanel.Location = new System.Drawing.Point(4, 579);
+            this.holeCompPanel.Location = new System.Drawing.Point(3, 584);
             this.holeCompPanel.Name = "holeCompPanel";
             this.holeCompPanel.Size = new System.Drawing.Size(535, 102);
             this.holeCompPanel.TabIndex = 6;
@@ -643,7 +642,7 @@
             // centerCompTrackBar
             // 
             this.centerCompTrackBar.AutoSize = false;
-            this.centerCompTrackBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.centerCompTrackBar.BackColor = System.Drawing.SystemColors.Control;
             this.centerCompTrackBar.Location = new System.Drawing.Point(49, 66);
             this.centerCompTrackBar.Maximum = 40;
             this.centerCompTrackBar.Minimum = -40;
@@ -656,7 +655,7 @@
             // centerLimitTrackBar
             // 
             this.centerLimitTrackBar.AutoSize = false;
-            this.centerLimitTrackBar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.centerLimitTrackBar.BackColor = System.Drawing.SystemColors.Control;
             this.centerLimitTrackBar.Location = new System.Drawing.Point(49, 25);
             this.centerLimitTrackBar.Maximum = 400;
             this.centerLimitTrackBar.Minimum = 1;
@@ -670,14 +669,14 @@
             // compCtrlPanel
             // 
             this.compCtrlPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.compCtrlPanel.BackColor = System.Drawing.Color.Transparent;
+            this.compCtrlPanel.BackColor = System.Drawing.SystemColors.Control;
             this.compCtrlPanel.Controls.Add(this.trackBarX);
             this.compCtrlPanel.Controls.Add(this.trackBarZ);
             this.compCtrlPanel.Controls.Add(this.trackBarY);
             this.compCtrlPanel.Controls.Add(this.label5);
             this.compCtrlPanel.Controls.Add(this.label4);
             this.compCtrlPanel.Controls.Add(this.label3);
-            this.compCtrlPanel.Location = new System.Drawing.Point(4, 562);
+            this.compCtrlPanel.Location = new System.Drawing.Point(3, 564);
             this.compCtrlPanel.Name = "compCtrlPanel";
             this.compCtrlPanel.Size = new System.Drawing.Size(510, 122);
             this.compCtrlPanel.TabIndex = 5;
@@ -687,7 +686,7 @@
             // 
             this.trackBarX.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.trackBarX.AutoSize = false;
-            this.trackBarX.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.trackBarX.BackColor = System.Drawing.SystemColors.Control;
             this.trackBarX.Location = new System.Drawing.Point(26, 3);
             this.trackBarX.Maximum = 40;
             this.trackBarX.Minimum = -40;
@@ -701,7 +700,7 @@
             // 
             this.trackBarZ.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.trackBarZ.AutoSize = false;
-            this.trackBarZ.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.trackBarZ.BackColor = System.Drawing.SystemColors.Control;
             this.trackBarZ.Location = new System.Drawing.Point(26, 84);
             this.trackBarZ.Maximum = 40;
             this.trackBarZ.Minimum = -40;
@@ -715,7 +714,7 @@
             // 
             this.trackBarY.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.trackBarY.AutoSize = false;
-            this.trackBarY.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.trackBarY.BackColor = System.Drawing.SystemColors.Control;
             this.trackBarY.Location = new System.Drawing.Point(26, 44);
             this.trackBarY.Maximum = 40;
             this.trackBarY.Minimum = -40;
@@ -749,7 +748,7 @@
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(3, 9);
+            this.label3.Location = new System.Drawing.Point(3, 10);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(24, 24);
             this.label3.TabIndex = 5;
@@ -757,11 +756,11 @@
             // 
             // label2
             // 
-            this.label2.BackColor = System.Drawing.Color.White;
+            this.label2.BackColor = System.Drawing.SystemColors.Control;
             this.label2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label2.ForeColor = System.Drawing.Color.Black;
-            this.label2.Location = new System.Drawing.Point(12, 9);
+            this.label2.Location = new System.Drawing.Point(3, 4);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(314, 329);
             this.label2.TabIndex = 1;
@@ -774,7 +773,7 @@
             this.label1.AutoSize = true;
             this.label1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
             this.label1.Font = new System.Drawing.Font("Tahoma", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(3, 687);
+            this.label1.Location = new System.Drawing.Point(5, 691);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(403, 25);
             this.label1.TabIndex = 0;
@@ -796,68 +795,24 @@
             this.backgroundWorker_Outline.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.backgroundWorker_Outline_ProgressChanged);
             this.backgroundWorker_Outline.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorker_Outline_RunWorkerCompleted);
             // 
-            // panelP2
-            // 
-            this.panelP2.BackColor = System.Drawing.Color.Transparent;
-            this.panelP2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelP2.Location = new System.Drawing.Point(465, 226);
-            this.panelP2.Name = "panelP2";
-            this.panelP2.Size = new System.Drawing.Size(8, 8);
-            this.panelP2.TabIndex = 12;
-            // 
-            // panelP3
-            // 
-            this.panelP3.BackColor = System.Drawing.Color.Transparent;
-            this.panelP3.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelP3.Location = new System.Drawing.Point(502, 257);
-            this.panelP3.Name = "panelP3";
-            this.panelP3.Size = new System.Drawing.Size(8, 8);
-            this.panelP3.TabIndex = 13;
-            // 
-            // comboBoxLEN1
-            // 
-            this.comboBoxLEN1.FormattingEnabled = true;
-            this.comboBoxLEN1.Items.AddRange(new object[] {
-            "Point 1",
-            "Point 2",
-            "Point 3",
-            "MidPoint 1-2",
-            "MidPoint 2-3",
-            "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxLEN1.Location = new System.Drawing.Point(65, 222);
-            this.comboBoxLEN1.Name = "comboBoxLEN1";
-            this.comboBoxLEN1.Size = new System.Drawing.Size(108, 26);
-            this.comboBoxLEN1.TabIndex = 46;
-            // 
-            // comboBoxLEN2
-            // 
-            this.comboBoxLEN2.FormattingEnabled = true;
-            this.comboBoxLEN2.Items.AddRange(new object[] {
-            "Point 1",
-            "Point 2",
-            "Point 3",
-            "MidPoint 1-2",
-            "MidPoint 2-3",
-            "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxLEN2.Location = new System.Drawing.Point(175, 222);
-            this.comboBoxLEN2.Name = "comboBoxLEN2";
-            this.comboBoxLEN2.Size = new System.Drawing.Size(108, 26);
-            this.comboBoxLEN2.TabIndex = 47;
-            // 
             // Form1
             // 
             this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.Color.Red;
-            this.ClientSize = new System.Drawing.Size(1026, 721);
-            this.Controls.Add(this.renderPanel);
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(128)))), ((int)(((byte)(255)))));
+            this.ClientSize = new System.Drawing.Size(1179, 721);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.compCtrlPanel);
+            this.Controls.Add(this.holeCompPanel);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.MesurementsPanel);
+            this.DoubleBuffered = true;
             this.KeyPreview = true;
             this.Name = "Form1";
             this.Text = "STL Viewer v1.2";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
+            this.Activated += new System.EventHandler(this.Form1_Activated);
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ClientSizeChanged += new System.EventHandler(this.Form1_ClientSizeChanged);
@@ -866,8 +821,11 @@
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.Form1_Paint);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form1_KeyDown);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.Form1_KeyUp);
-            this.renderPanel.ResumeLayout(false);
-            this.renderPanel.PerformLayout();
+            this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseDown);
+            this.MouseLeave += new System.EventHandler(this.panel1_MouseLeave);
+            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseMove);
+            this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseUp);
+            this.Resize += new System.EventHandler(this.Form1_Resize);
             this.MesurementsPanel.ResumeLayout(false);
             this.MesurementsPanel.PerformLayout();
             this.holeCompPanel.ResumeLayout(false);
@@ -880,12 +838,11 @@
             ((System.ComponentModel.ISupportInitialize)(this.trackBarZ)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarY)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.Panel renderPanel;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TrackBar trackBarX;
@@ -946,9 +903,6 @@
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.ComboBox holeRefComboBox;
         private System.Windows.Forms.RadioButton radioButton1;
-        private System.Windows.Forms.Panel panelP1;
-        private System.Windows.Forms.Panel panelP3;
-        private System.Windows.Forms.Panel panelP2;
         private System.Windows.Forms.ComboBox comboBoxLEN2;
         private System.Windows.Forms.ComboBox comboBoxLEN1;
     }

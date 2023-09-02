@@ -133,12 +133,17 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private readonly RenameDialog renameDialog_form = new RenameDialog();
 
-
-        private Vector3 P1, P2, P3;
-        private Point v1, v2, v3;
+        private int IndexP1, IndexP2, IndexP3 = -1;
+        private Vector3 P1, P2, P3, M12, M23, M31, C123, N123;
+        private float D123;
+        private PointF v1, v2, v3;
         private int MselectedP = 0; // 1 2 3
         private float[] mmat = new float[16];
+        public List<Vector3> viewVertices = new List<Vector3>();
         private Graphics paintG = null;
+        private float[] overlaymat = new float[16];
+        private float hcw = 1.0f;
+        private float hch = 1.0f;
 
         public Form1()
         {
@@ -174,14 +179,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 Console.WriteLine("error reading background color assembly properties: " + ex.Message);
             }
 
-            label1.BackColor = backColor;
-            trackBarX.BackColor = backColor;
-            trackBarY.BackColor = backColor;
-            trackBarZ.BackColor = backColor;
-            centerCompTrackBar.BackColor = backColor;
-            centerLimitTrackBar.BackColor = backColor;
-
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
+            updateMmat();
+            setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 1.0f, 100.0f);
+
+            hcw = ClientSize.Width  / 2.0f;
+            hch = ClientSize.Height / 2.0f;
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
             var args = Environment.GetCommandLineArgs();
 
@@ -306,6 +309,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             // center view on model
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
+            updateMmat();
+
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
             pz = Math.Max(bbData.maxX - bbData.minX, bbData.maxY - bbData.minY);
             pz = Math.Max(bbData.maxZ - bbData.minZ, pz);
@@ -392,6 +397,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (WindowInfo != null)
             {
                 setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
+                updateMmat();
+                setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 0.1f, 100.0f);
                 ReDraw();
             }
         }
@@ -399,6 +406,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private void Form1_MouseWheel(object sender, MouseEventArgs e)
         {
             pz += e.Delta > 0 ? mouseWheelSpeed : -mouseWheelSpeed;
+
+            if (MesurementsPanel.Visible) process_to_viewPort();
             ReDraw();
         }
 
@@ -508,31 +517,93 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
                 }
             }
-            WindowContext.SwapBuffers();
 
-            if ((v1.X > 0) && (v1.Y > 0))
+            if (MesurementsPanel.Visible)
             {
-                panelP1.Visible = true;
-                panelP1.Location = v1;
+                GL.MatrixMode(MatrixMode.Projection);
+                GL.LoadMatrix(overlaymat);
+                GL.MatrixMode(MatrixMode.Modelview);
+                GL.LoadIdentity();
+                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                GL.Disable(EnableCap.DepthTest);
+                GL.Disable(EnableCap.Lighting);
+
+                drawOverlay();
+
+                GL.Enable(EnableCap.DepthTest);
+                GL.Enable(EnableCap.Lighting);
             }
-            else panelP1.Visible = false;
 
-            if ((v2.X > 0) && (v2.Y > 0))
-            {
-                panelP2.Visible = true;
-                panelP2.Location = v2;
-            }
-            else panelP2.Visible = false;
-
-            if ((v3.X > 0) && (v3.Y > 0))
-            {
-                panelP3.Visible = true;
-                panelP3.Location = v3;
-            }
-            else panelP3.Visible = false;
-
-
+             WindowContext.SwapBuffers();
         }
+
+        private void drawOverlay()
+        {
+            GL.LineWidth(1.0f);
+            GL.Begin(PrimitiveType.Lines);
+            GL.Color4(0.2f, 1.0f, 0.2f, 1.0f);
+
+            if (IndexP1 > -1) mark(v1.X, v1.Y, 4.0f);
+            if (IndexP2 > -1) mark(v2.X, v2.Y, 4.0f);
+            if (IndexP3 > -1) mark(v3.X, v3.Y, 4.0f);
+            GL.End();
+
+            GL.LineWidth(2.0f);
+            GL.Begin(PrimitiveType.Lines);
+            GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
+
+            if ((IndexP1 > -1) && (IndexP2 > -1))
+            {
+                GL.Vertex3(v1.X, v1.Y, 3.0f);
+                GL.Vertex3(v2.X, v2.Y, 3.0f);
+            }
+            if ((IndexP2 > -1) && (IndexP3 > -1))
+            {
+                GL.Vertex3(v2.X, v2.Y, 3.0f);
+                GL.Vertex3(v3.X, v3.Y, 3.0f);
+            }
+            if ((IndexP3 > -1) && (IndexP1 > -1))
+            {
+                GL.Vertex3(v3.X, v3.Y, 3.0f);
+                GL.Vertex3(v1.X, v1.Y, 3.0f);
+            }
+
+            GL.End();
+            GL.LineWidth(1.0f);
+        }
+
+        private void mark(float x, float y, float hSize)
+        {
+            GL.Vertex3(x - hSize, y - hSize, 2.0f);
+            GL.Vertex3(x - hSize, y + hSize, 2.0f);
+
+            GL.Vertex3(x - hSize, y + hSize, 2.0f);
+            GL.Vertex3(x + hSize, y + hSize, 2.0f);
+
+            GL.Vertex3(x + hSize, y + hSize, 2.0f);   
+            GL.Vertex3(x + hSize, y - hSize, 2.0f);
+
+            GL.Vertex3(x + hSize, y - hSize, 2.0f);
+            GL.Vertex3(x - hSize, y - hSize, 2.0f);
+        }
+
+        private void selector(float x, float y)
+        {
+            var hSize = 4.0f;
+            GL.Color4(1.0f, 0.2f, 0.2f, 1.0f);
+            GL.Vertex3(x - hSize, y - hSize, 2.0f);
+            GL.Vertex3(x - hSize, y + hSize, 2.0f);
+
+            GL.Vertex3(x - hSize, y + hSize, 2.0f);
+            GL.Vertex3(x + hSize, y + hSize, 2.0f);
+
+            GL.Vertex3(x + hSize, y + hSize, 2.0f);
+            GL.Vertex3(x + hSize, y - hSize, 2.0f);
+
+            GL.Vertex3(x + hSize, y - hSize, 2.0f);
+            GL.Vertex3(x - hSize, y - hSize, 2.0f);
+        }
+
 
         private void setPerspective(float FOV, float AR, float Near, float Far)
         {
@@ -555,6 +626,26 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             pmat[13] = 0.0f;
             pmat[14] = 2.0f * Far * Near * nf;
             pmat[15] = 0.0f;
+        }
+
+        private void setOrtho(float Width, float Height, float Near, float Far)
+        {
+            overlaymat[0] = 2.0f / Width;
+            overlaymat[1] = 0.0f;
+            overlaymat[2] = 0.0f;
+            overlaymat[3] = 0.0f;
+            overlaymat[4] = 0.0f;
+            overlaymat[5] = 2.0f / Height;
+            overlaymat[6] = 0.0f;
+            overlaymat[7] = 0.0f;
+            overlaymat[8] = 0.0f;
+            overlaymat[9] = 0.0f;
+            overlaymat[10] = -2.0f / (Far - Near);
+            overlaymat[11] = 0.0f;
+            overlaymat[12] = 0.0f;
+            overlaymat[13] = 0.0f;
+            overlaymat[14] = (Far + Near) / (Far - Near);
+            overlaymat[15] = 1.0f;
         }
 
         // using Shell32;
@@ -715,14 +806,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
 
 
-
-
-
-
-
-
-
-
             ReDraw();
         }
 
@@ -787,6 +870,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             mouse_btn = true;
             mouse_x = e.X;
             mouse_y = e.Y;
+            this.Focus();
+            this.ActiveControl = null;
         }
 
         private void panel1_MouseLeave(object sender, EventArgs e)
@@ -820,7 +905,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 mouse_x = e.X;
                 mouse_y = e.Y;
                 ReDraw();
+                if (MesurementsPanel.Visible) process_to_viewPort();
             }
+            /*
             if ((MesurementsPanel.Visible) && (MselectedP > 0))
             {
                 // find Px
@@ -830,6 +917,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 // update 
                 ReDraw();
             }
+            */
         }
 
         private void Form1_ClientSizeChanged(object sender, EventArgs e)
@@ -1016,6 +1104,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 Console.WriteLine("num unique vertex " + uniqueVertices.Count);
                 Console.WriteLine("model analysed in " + (perfCount.ElapsedMilliseconds - loadStart));
                 UniqueVerticesReady = true;
+                viewVertices = uniqueVertices.ToList();
                 ReDraw();
 
                 // start edge finding
@@ -1643,44 +1732,62 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     GL.Translate(pivot);
         */
 
-        private List<Vector3> viewVertices = new List<Vector3>();
+
+
+        private void updateMmat()
+        {
+            mat_copy(ref mmat, ref pmat);
+            mat_translate(ref mmat, 0.0f, 0.0f, -pz);
+            mat_rotateX(ref mmat, rx * 0.0174533f);
+            mat_rotateY(ref mmat, ry * 0.0174533f);
+            mat_translate(ref mmat, pivot.X, pivot.Y, pivot.Z);
+        }
 
         private void process_to_viewPort()
         {
             if (!UniqueVerticesReady) return;
 
-            //apply transform to matrice
-            mat_copy(ref mmat, ref pmat);
-            mat_translate(ref mmat, 0.0f, 0.0f, -pz);
-            mat_rotateX(ref mmat, rx * 0.0174533f);
-            mat_rotateY(ref mmat, ry * 0.0174533f);
-            mat_translate(ref mmat, pivot.X, pivot.Y, pivot.Z);// TODO recalc only when changing pmat
+            for (var i = 0; i < viewVertices.Count; ++i) viewVertices[i] = mat_apply(ref mmat, uniqueVertices[i]);
+    
+            IndexP1 = 0;
+            IndexP2 = 1; // todo move to mouseMove
+            IndexP3 = 2;
 
-            viewVertices.Clear(); // TODO dont remake every time
-            //apply matrice to vertex
-            //         public List<Vector3> uniqueVertices
-            // public List<int> uniqueIndices;
-            for (var i = 0; i < uniqueVertices.Count; ++i)
+            if (IndexP1 > -1)
             {
-                var nv = new Vector3(uniqueVertices[i]);
-                mat_apply(ref mmat, ref nv);
-                viewVertices.Add(nv);
+                v1.X = viewVertices[IndexP1].X * hcw;
+                v1.Y = viewVertices[IndexP1].Y * hch;
             }
-           // var nl = new Point();
-            v1.X = (int)(viewVertices[0].X * (ClientSize.Width / 2.0f) + (ClientSize.Width / 2.0f));
-            v1.Y = (int)(-viewVertices[0].Y * (ClientSize.Height / 2.0f) + (ClientSize.Height / 2.0f));
-            v2.X = (int)(viewVertices[1].X * (ClientSize.Width / 2.0f) + (ClientSize.Width / 2.0f));
-            v2.Y = (int)(-viewVertices[1].Y * (ClientSize.Height / 2.0f) + (ClientSize.Height / 2.0f));
-            v3.X = (int)(viewVertices[2].X * (ClientSize.Width / 2.0f) + (ClientSize.Width / 2.0f));
-            v3.Y = (int)(-viewVertices[2].Y * (ClientSize.Height / 2.0f) + (ClientSize.Height / 2.0f));
-            //   labelMark.Location.X = (int)v1.X;
-            // find closest vectex to mouse position and screen
+            if (IndexP2 > -1)
+            {
+                v2.X = viewVertices[IndexP2].X * hcw;
+                v2.Y = viewVertices[IndexP2].Y * hch;
+            }
+            if (IndexP3 > -1)
+            {
+                v3.X = viewVertices[IndexP3].X * hcw;
+                v3.Y = viewVertices[IndexP3].Y * hch;
+            }
         }
 
         private void mat_copy(ref float[] dest, ref float[] source)
         {
             for (var i = 0; i < 16; ++i) dest[i] = source[i];
         }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 1.0f, 100.0f);
+            hcw = ClientSize.Width  / 2.0f;
+            hch = ClientSize.Height / 2.0f;
+        }
+
+        private void Form1_Activated(object sender, EventArgs e)
+        {
+            comboBoxLEN1.SelectedIndex = 0;
+            comboBoxLEN2.SelectedIndex = 1;
+        }
+
         private void mat_translate(ref float[] a, float x, float y, float z)
         {
             a[12] = a[0] * x + a[4] * y + a[8]  * z + a[12];
@@ -1737,7 +1844,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             a[11] = a03 * s + a11 * c;
         }
 
-        private void mat_apply(ref float[] m, ref Vector3 a)
+        private Vector3 mat_apply(ref float[] m, Vector3 a)
         {
             var a0 = a[0];
             var a1 = a[1];
@@ -1750,6 +1857,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             a[1] = (m[1] * a0 + m[5] * a1 + m[9] * a2 + m[13]) / w;
             a[2] = (m[2] * a0 + m[6] * a1 + m[10] * a2 + m[14]) / w;
 
+            return a;
         }
     }
 }
