@@ -155,9 +155,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private List<Vector3> viewVertices = new List<Vector3>();
         private int iP1, iP2, iP3 = -1; // vertex indices of selected points
         private Vector3 P1, P2, P3, M12, M23, M31, C123, N123; // vector data
-        private Vector3 oP1, oP2, oP3, oM12, oM23, oM31, oC123, oN123; // overlay vector positions
+        private Vector3 oM12, oM23, oM31, oC123, oN123; // overlay vector positions
         private int MesureSelectingPoint = 0; // 1 2 3
-        private const float MesureSelectingMaxDistSquare = 1000.0f;
+        private const float MesureSelectingMaxDistSquare = 100.0f;
 
 
         #region contructors and setup
@@ -1614,6 +1614,43 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             return mat_apply(ref projectionViewMatrix, v) * viewScale;
         }
 
+        /*
+            Point 1
+            Point 2
+            Point 3
+            MidPoint 1-2
+            MidPoint 2-3
+            MidPoint 3-1
+            Center 1-2-3
+                    */
+        private bool selectPointFromComboIndex(int i, ref Vector3 v)
+        {
+            switch (i)
+            {
+                case 0: // P1
+                    v = P1;
+                    return (iP1 > -1);
+                case 1: // P2
+                    v = P2;
+                    return (iP2 > -1);
+                case 2: // P3
+                    v = P3;
+                    return (iP3 > -1);
+                case 3: // M12
+                    v = M12;
+                    return ((iP1 > -1) && (iP2 > -1));
+                case 4: // M23
+                    v = M23;
+                    return ((iP2 > -1) && (iP3 > -1));
+                case 5: // M31
+                    v = M31;
+                    return ((iP3 > -1) && (iP1 > -1));
+                case 6: // C123
+                    v = C123;
+                    return ((iP1 > -1) && (iP2 > -1) && (iP3 > -1));
+            }
+            return false;
+        }
         private void updateMesurePanelData()
         {
             resetMesurePanel();
@@ -1671,8 +1708,21 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             // P1P2P3 circle // TODO : add selector for 3 points
 
             // Length
+            var pA = new Vector3(0.0f);
+            var pB = new Vector3(0.0f);
+            if (selectPointFromComboIndex(comboBoxLEN1.SelectedIndex, ref pA) && selectPointFromComboIndex(comboBoxLEN2.SelectedIndex, ref pB))
+            {
+                labelLEN.Text = formatMesure(Vector3.Distance(pA, pB));
+            }
 
             // Angle
+            var pC = new Vector3(0.0f);
+            var pD = new Vector3(0.0f);
+            if (selectPointFromComboIndex(comboBoxANG1.SelectedIndex, ref pA) && selectPointFromComboIndex(comboBoxANG2.SelectedIndex, ref pB) &&
+                selectPointFromComboIndex(comboBoxANG3.SelectedIndex, ref pC) && selectPointFromComboIndex(comboBoxANG4.SelectedIndex, ref pD))
+            {
+                labelANG.Text = (57.2957f * Vector3.CalculateAngle(pA - pB, pD - pC)).ToString("F1");
+            }
         }
 
         private void resetMesurePanel()
