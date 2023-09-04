@@ -29,7 +29,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         //OpenGL
         public IWindowInfo WindowInfo;
         public GraphicsContext WindowContext;
-        private float[] pmat; // perspective matrix
+        private float[] projectionMatrix = new float[16];
+        private float[] projectionViewMatrix = new float[16];
+        // modelMatrix is Identity
         private const float _fov = 45.0f;
 
         //Directory and file content
@@ -138,10 +140,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private float D123;
         private PointF v1, v2, v3;
         private int MselectedP = 0; // 1 2 3
-        private float[] mmat = new float[16];
         public List<Vector3> viewVertices = new List<Vector3>();
-        private Graphics paintG = null;
-        private float[] overlaymat = new float[16];
+
+        private float[] overlayProjectionMatrix = new float[16];
         private float hcw = 1.0f;
         private float hch = 1.0f;
 
@@ -149,7 +150,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             perfCount.Start();
             InitializeComponent();
-            pmat = new float[16];
+
             try
             {
                 defaultColor = new Vector4(
@@ -180,7 +181,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
 
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
-            updateMmat();
             setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 1.0f, 100.0f);
 
             hcw = ClientSize.Width  / 2.0f;
@@ -309,7 +309,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             // center view on model
             setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
-            updateMmat();
 
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
             pz = Math.Max(bbData.maxX - bbData.minX, bbData.maxY - bbData.minY);
@@ -393,11 +392,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void resetSizes()
         {
-           // renderPanel.Size = ClientSize;
+            hcw = ClientSize.Width / 2.0f;
+            hch = ClientSize.Height / 2.0f;
+
             if (WindowInfo != null)
             {
                 setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
-                updateMmat();
                 setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 0.1f, 100.0f);
                 ReDraw();
             }
@@ -407,7 +407,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             pz += e.Delta > 0 ? mouseWheelSpeed : -mouseWheelSpeed;
 
-            if (MesurementsPanel.Visible) process_to_viewPort();
             ReDraw();
         }
 
@@ -415,7 +414,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             Console.WriteLine("form paint");
             resetSizes();
-            paintG = e.Graphics;
         }
 
         private void ReDraw()
@@ -447,12 +445,21 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 
             GL.MatrixMode(MatrixMode.Projection);
-            GL.LoadMatrix(pmat);
-            GL.Translate(0.0f, 0.0f, -pz);
-            GL.Rotate(rx, 1.0f, 0.0f, 0.0f); // ang in degrees
-            GL.Rotate(ry, 0.0f, 1.0f, 0.0f);
-            GL.Translate(pivot);
+           // GL.LoadMatrix(projectionMatrix);
+           // GL.Translate(0.0f, 0.0f, -pz);
+           // GL.Rotate(rx, 1.0f, 0.0f, 0.0f); // ang in degrees
+           // GL.Rotate(ry, 0.0f, 1.0f, 0.0f);
+           // GL.Translate(pivot);
 
+            mat_copy(ref projectionViewMatrix, ref projectionMatrix);
+            mat_translate(ref projectionViewMatrix, 0.0f, 0.0f, -pz);
+            mat_rotateX(ref projectionViewMatrix, rx * 0.0174533f);
+            mat_rotateY(ref projectionViewMatrix, ry * 0.0174533f);
+            mat_translate(ref projectionViewMatrix, pivot.X, pivot.Y, pivot.Z);
+
+            GL.LoadMatrix(projectionViewMatrix);
+
+            //updateMmat();
 
             GL.MatrixMode(MatrixMode.Modelview);
             GL.LoadIdentity();
@@ -520,8 +527,10 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             if (MesurementsPanel.Visible)
             {
+                process_to_viewPort();
+
                 GL.MatrixMode(MatrixMode.Projection);
-                GL.LoadMatrix(overlaymat);
+                GL.LoadMatrix(overlayProjectionMatrix);
                 GL.MatrixMode(MatrixMode.Modelview);
                 GL.LoadIdentity();
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
@@ -610,42 +619,42 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var f = (float)(1.0 / Math.Tan(FOV / 2.0));
             var nf = (float)(1.0 / (Near - Far));
 
-            pmat[0] = f / AR;
-            pmat[1] = 0.0f;
-            pmat[2] = 0.0f;
-            pmat[3] = 0.0f;
-            pmat[4] = 0.0f;
-            pmat[5] = f;
-            pmat[6] = 0.0f;
-            pmat[7] = 0.0f;
-            pmat[8] = 0.0f;
-            pmat[9] = 0.0f;
-            pmat[10] = (Far + Near) * nf;
-            pmat[11] = -1.0f;
-            pmat[12] = 0.0f;
-            pmat[13] = 0.0f;
-            pmat[14] = 2.0f * Far * Near * nf;
-            pmat[15] = 0.0f;
+            projectionMatrix[0] = f / AR;
+            projectionMatrix[1] = 0.0f;
+            projectionMatrix[2] = 0.0f;
+            projectionMatrix[3] = 0.0f;
+            projectionMatrix[4] = 0.0f;
+            projectionMatrix[5] = f;
+            projectionMatrix[6] = 0.0f;
+            projectionMatrix[7] = 0.0f;
+            projectionMatrix[8] = 0.0f;
+            projectionMatrix[9] = 0.0f;
+            projectionMatrix[10] = (Far + Near) * nf;
+            projectionMatrix[11] = -1.0f;
+            projectionMatrix[12] = 0.0f;
+            projectionMatrix[13] = 0.0f;
+            projectionMatrix[14] = 2.0f * Far * Near * nf;
+            projectionMatrix[15] = 0.0f;
         }
 
         private void setOrtho(float Width, float Height, float Near, float Far)
         {
-            overlaymat[0] = 2.0f / Width;
-            overlaymat[1] = 0.0f;
-            overlaymat[2] = 0.0f;
-            overlaymat[3] = 0.0f;
-            overlaymat[4] = 0.0f;
-            overlaymat[5] = 2.0f / Height;
-            overlaymat[6] = 0.0f;
-            overlaymat[7] = 0.0f;
-            overlaymat[8] = 0.0f;
-            overlaymat[9] = 0.0f;
-            overlaymat[10] = -2.0f / (Far - Near);
-            overlaymat[11] = 0.0f;
-            overlaymat[12] = 0.0f;
-            overlaymat[13] = 0.0f;
-            overlaymat[14] = (Far + Near) / (Far - Near);
-            overlaymat[15] = 1.0f;
+            overlayProjectionMatrix[0] = 2.0f / Width;
+            overlayProjectionMatrix[1] = 0.0f;
+            overlayProjectionMatrix[2] = 0.0f;
+            overlayProjectionMatrix[3] = 0.0f;
+            overlayProjectionMatrix[4] = 0.0f;
+            overlayProjectionMatrix[5] = 2.0f / Height;
+            overlayProjectionMatrix[6] = 0.0f;
+            overlayProjectionMatrix[7] = 0.0f;
+            overlayProjectionMatrix[8] = 0.0f;
+            overlayProjectionMatrix[9] = 0.0f;
+            overlayProjectionMatrix[10] = -2.0f / (Far - Near);
+            overlayProjectionMatrix[11] = 0.0f;
+            overlayProjectionMatrix[12] = 0.0f;
+            overlayProjectionMatrix[13] = 0.0f;
+            overlayProjectionMatrix[14] = (Far + Near) / (Far - Near);
+            overlayProjectionMatrix[15] = 1.0f;
         }
 
         // using Shell32;
@@ -905,13 +914,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 mouse_x = e.X;
                 mouse_y = e.Y;
                 ReDraw();
-                if (MesurementsPanel.Visible) process_to_viewPort();
             }
             /*
             if ((MesurementsPanel.Visible) && (MselectedP > 0))
             {
                 // find Px
-                process_to_viewPort();
+
                 MselectedP = 0;
                 // update panel data
                 // update 
@@ -922,6 +930,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void Form1_ClientSizeChanged(object sender, EventArgs e)
         {
+            Console.WriteLine("ClientSizeChanged");
             resetSizes();
         }
 
@@ -1497,6 +1506,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             return 0.0f;
         }
 
+        private void Form1_SizeChanged(object sender, EventArgs e)
+        {
+            Console.WriteLine("SizeChanged");
+            resetSizes();
+        }
+
         private Vector3 changeLengthBy(Vector3 v, float comp, float offsetY)
         {
             if (holeAxisRadioButtonX.Checked)
@@ -1734,20 +1749,11 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
 
 
-        private void updateMmat()
-        {
-            mat_copy(ref mmat, ref pmat);
-            mat_translate(ref mmat, 0.0f, 0.0f, -pz);
-            mat_rotateX(ref mmat, rx * 0.0174533f);
-            mat_rotateY(ref mmat, ry * 0.0174533f);
-            mat_translate(ref mmat, pivot.X, pivot.Y, pivot.Z);
-        }
-
         private void process_to_viewPort()
         {
             if (!UniqueVerticesReady) return;
 
-            for (var i = 0; i < viewVertices.Count; ++i) viewVertices[i] = mat_apply(ref mmat, uniqueVertices[i]);
+            for (var i = 0; i < viewVertices.Count; ++i) viewVertices[i] = mat_apply(ref projectionViewMatrix, uniqueVertices[i]);
     
             IndexP1 = 0;
             IndexP2 = 1; // todo move to mouseMove
@@ -1773,13 +1779,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private void mat_copy(ref float[] dest, ref float[] source)
         {
             for (var i = 0; i < 16; ++i) dest[i] = source[i];
-        }
-
-        private void Form1_Resize(object sender, EventArgs e)
-        {
-            setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 1.0f, 100.0f);
-            hcw = ClientSize.Width  / 2.0f;
-            hch = ClientSize.Height / 2.0f;
         }
 
         private void Form1_Activated(object sender, EventArgs e)

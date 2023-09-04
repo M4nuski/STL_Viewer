@@ -816,6 +816,7 @@
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ClientSizeChanged += new System.EventHandler(this.Form1_ClientSizeChanged);
+            this.SizeChanged += new System.EventHandler(this.Form1_SizeChanged);
             this.DragDrop += new System.Windows.Forms.DragEventHandler(this.Form1_DragDrop);
             this.DragEnter += new System.Windows.Forms.DragEventHandler(this.Form1_DragEnter);
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.Form1_Paint);
@@ -825,7 +826,6 @@
             this.MouseLeave += new System.EventHandler(this.panel1_MouseLeave);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.panel1_MouseUp);
-            this.Resize += new System.EventHandler(this.Form1_Resize);
             this.MesurementsPanel.ResumeLayout(false);
             this.MesurementsPanel.PerformLayout();
             this.holeCompPanel.ResumeLayout(false);
