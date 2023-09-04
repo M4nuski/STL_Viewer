@@ -34,8 +34,13 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private float[] overlayProjectionMatrix = new float[16];
         // modelMatrix is Identity
         private const float _fov = 45.0f;
-        private float halfViewWidth = 320.0f;
-        private float halfViewHeight = 240.0f;
+        private float halfViewWidthF = 320.0f;
+        private float halfViewHeightF = 240.0f;
+        private int viewWidth = 640;
+        private int viewHeight = 480;
+        private float viewWidthF = 640.0f;
+        private float viewHeightF = 480.0f;
+        private Vector3 viewScale = new Vector3(1.0f);
 
         //Directory and file content
         private List<string> dirList = new List<string>();
@@ -148,11 +153,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         // For mesurements
         private List<Vector3> viewVertices = new List<Vector3>();
-        private int iP1, iP2, iP3 = -1;
-        private Vector3 P1, P2, P3, M12, M23, M31, C123, N123;
-        private PointF oP1, oP2, oP3, oM12, oM23, oM31, oC123, oN123;
-        private float D123;
-        private int MselectedP = 0; // 1 2 3
+        private int iP1, iP2, iP3 = -1; // vertex indices of selected points
+        private Vector3 P1, P2, P3, M12, M23, M31, C123, N123; // vector data
+        private Vector3 oP1, oP2, oP3, oM12, oM23, oM31, oC123, oN123; // overlay vector positions
+        private int MesureSelectingPoint = 0; // 1 2 3
+        private const float MesureSelectingMaxDistSquare = 1000.0f;
+
 
         #region contructors and setup
 
@@ -190,11 +196,18 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 Console.WriteLine("error reading background color assembly properties: " + ex.Message);
             }
 
-            setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
-            setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 1.0f, 100.0f);
+            viewWidth  = ClientSize.Width;
+            viewHeight = ClientSize.Height;
+            viewWidthF  = (float)viewWidth;
+            viewHeightF = (float)viewHeight;
+            halfViewWidthF  = viewWidthF / 2.0f;
+            halfViewHeightF = viewHeightF / 2.0f;
+            viewScale = new Vector3(halfViewWidthF, halfViewHeightF, 1.0f);
 
-            halfViewWidth = ClientSize.Width  / 2.0f;
-            halfViewHeight = ClientSize.Height / 2.0f;
+            setPerspective(_fov, viewWidthF / viewHeightF, 0.1f, 4096.0f);
+            setOrtho(viewWidthF, viewHeightF, 1.0f, 100.0f);
+
+
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
             var args = Environment.GetCommandLineArgs();
 
@@ -226,7 +239,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             WindowContext.LoadAll();
 
             WindowContext.SwapInterval = 1;
-            GL.Viewport(0, 0, this.ClientSize.Width, this.ClientSize.Height);
+            GL.Viewport(0, 0, viewWidth, viewHeight);
 
             GL.Enable(EnableCap.DepthTest);
 
@@ -256,6 +269,10 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             comboBoxLEN1.SelectedIndex = 0;
             comboBoxLEN2.SelectedIndex = 1;
             comboBoxLENUnit.SelectedIndex = 0;
+            comboBoxANG1.SelectedIndex = 0;
+            comboBoxANG2.SelectedIndex = 1;
+            comboBoxANG3.SelectedIndex = 1;
+            comboBoxANG4.SelectedIndex = 2;
         }
         #endregion
 
@@ -324,7 +341,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             bbData.maxZ += modelPos.Z;
 
             // center view on model
-            setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
+            setPerspective(_fov, viewWidthF / viewHeightF, 0.1f, 4096.0f);
 
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
             pz = Math.Max(bbData.maxX - bbData.minX, bbData.maxY - bbData.minY);
@@ -391,13 +408,18 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         #region viewport and display
         private void resetSizes()
         {
-            halfViewWidth = ClientSize.Width / 2.0f;
-            halfViewHeight = ClientSize.Height / 2.0f;
+            viewWidth  = ClientSize.Width;
+            viewHeight = ClientSize.Height;
+            viewWidthF  = (float)viewWidth;
+            viewHeightF = (float)viewHeight;
+            halfViewWidthF  = viewWidthF / 2.0f;
+            halfViewHeightF = viewHeightF / 2.0f;
+            viewScale = new Vector3(halfViewWidthF, halfViewHeightF, 1.0f);
 
             if (WindowInfo != null)
             {
-                setPerspective(_fov, (float)ClientSize.Width / ClientSize.Height, 0.1f, 4096.0f);
-                setOrtho((float)ClientSize.Width, (float)ClientSize.Height, 0.1f, 100.0f);
+                setPerspective(_fov, viewWidthF / viewHeightF, 0.1f, 4096.0f);
+                setOrtho(viewWidthF, viewHeightF, 0.1f, 100.0f);
                 ReDraw();
             }
         }
@@ -525,7 +547,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             {
                 originalColors = !originalColors;
             }
-            if (e.KeyCode == Keys.O) // Toggle model colors
+            if (e.KeyCode == Keys.O) // Toggle model outline
             {
                 ++outlineMode;
                 if (outlineMode > 3) outlineMode = 1;
@@ -606,6 +628,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 else Console.WriteLine($"Rename cancelled");
              }
 
+            // mesurements
             if (e.KeyCode == Keys.M)
             {
                 MesurementsPanel.Visible = !MesurementsPanel.Visible;
@@ -613,17 +636,17 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if ((e.KeyCode == Keys.D1) && MesurementsPanel.Visible)
             {
                // Mselecting = true;
-                MselectedP = 1;
+                MesureSelectingPoint = 1;
             }
             if ((e.KeyCode == Keys.D2) && MesurementsPanel.Visible)
             {
                 //Mselecting = true;
-                MselectedP = 2;
+                MesureSelectingPoint = 2;
             }
             if ((e.KeyCode == Keys.D3) && MesurementsPanel.Visible)
             {
                // Mselecting = true;
-                MselectedP = 3;
+                MesureSelectingPoint = 3;
             }
 
             ReDraw();
@@ -631,20 +654,11 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void Form1_KeyUp(object sender, KeyEventArgs e)
         {
-            if ((e.KeyCode == Keys.D1) && (MselectedP == 1))
+            if ((e.KeyCode == Keys.D1) || (e.KeyCode == Keys.D2) || (e.KeyCode == Keys.D3))
             {
-                //  Mselecting = false;
-                MselectedP = 0;
-            }
-            if ((e.KeyCode == Keys.D2) && (MselectedP == 2))
-            {
-                // Mselecting = false;
-                MselectedP = 0;
-            }
-            if ((e.KeyCode == Keys.D3) && (MselectedP == 3))
-            {
-                //  Mselecting = false;
-                MselectedP = 0;
+                if ((MesurementsPanel.Visible) && (MesureSelectingPoint > 0) && (UniqueVerticesReady)) checkPointSelect(mouse_x, mouse_y);
+                MesureSelectingPoint = 0;
+
             }
         }
 
@@ -653,6 +667,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             mouse_btn = true;
             mouse_x = e.X;
             mouse_y = e.Y;
+
             this.Focus();
             this.ActiveControl = null;
         }
@@ -660,6 +675,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private void Form1_MouseLeave(object sender, EventArgs e)
         {
             mouse_btn = false;
+            MesureSelectingPoint = 0;
         }
 
         private void Form1_MouseUp(object sender, MouseEventArgs e)
@@ -685,21 +701,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     py -= d_y * mouseSpeed;
                 }
 
+                ReDraw();
+            }
                 mouse_x = e.X;
                 mouse_y = e.Y;
-                ReDraw();
-            }
-            /*
-            if ((MesurementsPanel.Visible) && (MselectedP > 0))
-            {
-                // find Px
 
-                MselectedP = 0;
-                // update panel data
-                // update 
-                ReDraw();
-            }
-            */
+            if ((MesurementsPanel.Visible) && (MesureSelectingPoint > 0) && (UniqueVerticesReady)) checkPointSelect(e.X, e.Y);
         }
 
         private void Form1_MouseWheel(object sender, MouseEventArgs e)
@@ -1398,68 +1405,6 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             return a.FindAll(elem => ((elem != exception) && b.Contains(elem)));
         }
 
-        private void comboBoxLEN1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            updateMesurePanelData();
-        }
-
-        private string formatMesure(float m)
-        {
-            if (comboBoxLENUnit.SelectedIndex == 0)
-            {
-                return m.ToString("F2");
-            } else
-            {
-                return (m / 25.4f).ToString("F3");
-            }
-        }
-
-        private void updateMesurePanelData()
-        {
-            resetMesurePanel();
-        }
-
-        private void resetMesurePanel()
-        {
-            var defaultLabelText = "0.00";
-            if (comboBoxLENUnit.SelectedIndex != 0) defaultLabelText = "0.000";
-
-            labelP1X.Text = defaultLabelText;
-            labelP1Y.Text = defaultLabelText;
-            labelP1Z.Text = defaultLabelText;
-
-            labelP2X.Text = defaultLabelText;
-            labelP2Y.Text = defaultLabelText;
-            labelP2Z.Text = defaultLabelText;
-
-            labelP3X.Text = defaultLabelText;
-            labelP3Y.Text = defaultLabelText;
-            labelP3Z.Text = defaultLabelText;
-
-            labelMID12X.Text = defaultLabelText;
-            labelMID12Y.Text = defaultLabelText;
-            labelMID12Z.Text = defaultLabelText;
-
-            labelMID23X.Text = defaultLabelText;
-            labelMID23Y.Text = defaultLabelText;
-            labelMID23Z.Text = defaultLabelText;
-
-            labelMID31X.Text = defaultLabelText;
-            labelMID31Y.Text = defaultLabelText;
-            labelMID31Z.Text = defaultLabelText;
-
-            labelDIA123.Text = defaultLabelText;
-
-            labelCEN123X.Text = defaultLabelText;
-            labelCEN123Y.Text = defaultLabelText;
-            labelCEN123Z.Text = defaultLabelText;
-
-            labelNOR123X.Text = defaultLabelText;
-            labelNOR123Y.Text = defaultLabelText;
-            labelNOR123Z.Text = defaultLabelText;
-
-            labelLEN12.Text = defaultLabelText;
-        }
         #endregion
 
         #region vector helper methods
@@ -1511,6 +1456,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             return new Vector3(v.X * scale.X, ((v.Y + offsetY) * scale.Y) - offsetY, v.Z * scale.Z);
         }
+
+        private Vector3 midPoint(Vector3 p1, Vector3 p2)
+        {
+            return new Vector3((p1.X + p2.X) / 2.0f, (p1.Y + p2.Y) / 2.0f, (p1.Z + p2.Z) / 2.0f);
+        }
+
         #endregion
 
         #region matrix helper methods
@@ -1608,6 +1559,167 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             oP3.X = viewVertices[iP3].X * halfViewWidth;
             oP3.Y = viewVertices[iP3].Y * halfViewHeight;
         }*/
+
+        private void checkPointSelect(int X, int Y)
+        {
+            var oldP1index = iP1;
+            var oldP2index = iP2;
+            var oldP3index = iP3;
+
+            var newIndex = -1;
+            // find Px
+            // check all and keep closest within max distance
+            // MesureSelectingMaxDistSquare
+            var d = MesureSelectingMaxDistSquare;
+            var mousePoint = new Vector3(X - halfViewWidthF, -Y + halfViewHeightF, 0.0f);
+            for (var i = 0; i < viewVertices.Count; ++i)
+            {
+                var newD = Vector3.DistanceSquared(viewVertices[i], mousePoint);
+                if ((newD < MesureSelectingMaxDistSquare) && (newD < d))
+                {
+                    d = newD;
+                    newIndex = i;
+                }
+            }
+            if (newIndex != -1)
+            {
+                if (MesureSelectingPoint == 1) iP1 = newIndex;
+                if (MesureSelectingPoint == 2) iP2 = newIndex;
+                if (MesureSelectingPoint == 3) iP3 = newIndex;
+
+                if ((oldP1index != iP1) || (oldP2index != iP2) || (oldP3index != iP3)) updateMesurePanelData();
+            }
+            ReDraw();
+        }
+
+        private void comboBoxLEN1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            updateMesurePanelData();
+        }
+
+        private string formatMesure(float m)
+        {
+            if (comboBoxLENUnit.SelectedIndex == 0)
+            {
+                return m.ToString("F2");
+            }
+            else
+            {
+                return (m / 25.4f).ToString("F3");
+            }
+        }
+
+        private Vector3 transformForView(Vector3 v)
+        {
+            return mat_apply(ref projectionViewMatrix, v) * viewScale;
+        }
+
+        private void updateMesurePanelData()
+        {
+            resetMesurePanel();
+            if (!UniqueVerticesReady) return;
+
+            // Points
+            if (iP1 >= 0)
+            {
+                P1 = uniqueVertices[iP1];
+                labelP1X.Text = "X: " + formatMesure(P1.X);
+                labelP1Y.Text = "Y: " + formatMesure(P1.Y);
+                labelP1Z.Text = "Z: " + formatMesure(P1.Z);
+            }
+            if (iP2 >= 0)
+            {
+                P2 = uniqueVertices[iP2];
+                labelP2X.Text = "X: " + formatMesure(P2.X);
+                labelP2Y.Text = "Y: " + formatMesure(P2.Y);
+                labelP2Z.Text = "Z: " + formatMesure(P2.Z);
+            }
+            if (iP3 >= 0)
+            {
+                P3 = uniqueVertices[iP3];
+                labelP3X.Text = "X: " + formatMesure(P3.X);
+                labelP3Y.Text = "Y: " + formatMesure(P3.Y);
+                labelP3Z.Text = "Z: " + formatMesure(P3.Z);
+            }
+
+            // Midpoints
+            var bMP12 = ((iP1 >= 0) && (iP2 >= 0));
+            if (bMP12)
+            {
+                M12 = midPoint(P1, P2);
+                labelMID12X.Text = "X: " + formatMesure(M12.X);
+                labelMID12Y.Text = "Y: " + formatMesure(M12.Y);
+                labelMID12Z.Text = "Z: " + formatMesure(M12.Z);
+            }
+            var bMP23 = ((iP2 >= 0) && (iP3 >= 0));
+            if (bMP23)
+            {
+                M23 = midPoint(P2, P3);
+                labelMID23X.Text = "X: " + formatMesure(M23.X);
+                labelMID23Y.Text = "Y: " + formatMesure(M23.Y);
+                labelMID23Z.Text = "Z: " + formatMesure(M23.Z);
+            }
+            var bMP31 = ((iP3 >= 0) && (iP1 >= 0));
+            if (bMP31)
+            {
+                M31 = midPoint(P3, P1);
+                labelMID31X.Text = "X: " + formatMesure(M31.X);
+                labelMID31Y.Text = "Y: " + formatMesure(M31.Y);
+                labelMID31Z.Text = "Z: " + formatMesure(M31.Z);
+            }
+
+            // P1P2P3 circle // TODO : add selector for 3 points
+
+            // Length
+
+            // Angle
+        }
+
+        private void resetMesurePanel()
+        {
+            var defaultLabelText = "0.00";
+            if (comboBoxLENUnit.SelectedIndex != 0) defaultLabelText = "0.000";
+
+            labelP1X.Text = "X: " + defaultLabelText;
+            labelP1Y.Text = "Y: " + defaultLabelText;
+            labelP1Z.Text = "Z: " + defaultLabelText;
+
+            labelP2X.Text = "X: " + defaultLabelText;
+            labelP2Y.Text = "Y: " + defaultLabelText;
+            labelP2Z.Text = "Z: " + defaultLabelText;
+
+            labelP3X.Text = "X: " + defaultLabelText;
+            labelP3Y.Text = "Y: " + defaultLabelText;
+            labelP3Z.Text = "Z: " + defaultLabelText;
+
+            labelMID12X.Text = "X: " + defaultLabelText;
+            labelMID12Y.Text = "Y: " + defaultLabelText;
+            labelMID12Z.Text = "Z: " + defaultLabelText;
+
+            labelMID23X.Text = "X: " + defaultLabelText;
+            labelMID23Y.Text = "Y: " + defaultLabelText;
+            labelMID23Z.Text = "Z: " + defaultLabelText;
+
+            labelMID31X.Text = "X: " + defaultLabelText;
+            labelMID31Y.Text = "Y: " + defaultLabelText;
+            labelMID31Z.Text = "Z: " + defaultLabelText;
+
+            labelDIA123.Text = defaultLabelText;
+
+            labelCEN123X.Text = "X: " + defaultLabelText;
+            labelCEN123Y.Text = "Y: " + defaultLabelText;
+            labelCEN123Z.Text = "Z: " + defaultLabelText;
+
+            labelNOR123X.Text = "X: " + defaultLabelText;
+            labelNOR123Y.Text = "Y: " + defaultLabelText;
+            labelNOR123Z.Text = "Z: " + defaultLabelText;
+
+            labelLEN.Text = defaultLabelText;
+
+            labelANG.Text = defaultLabelText;
+        }
+
+
         #endregion
 
         #region render
@@ -1689,7 +1801,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             // redraw
             WindowContext.MakeCurrent(WindowInfo);
-            GL.Viewport(0, 0, this.ClientSize.Width, this.ClientSize.Height);
+            GL.Viewport(0, 0, viewWidth, viewHeight);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             GL.MatrixMode(MatrixMode.Projection);
@@ -1776,8 +1888,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             // draw overlay
             if (UniqueVerticesReady && MesurementsPanel.Visible)
-            {
-                for (var i = 0; i < viewVertices.Count; ++i) viewVertices[i] = mat_apply(ref projectionViewMatrix, uniqueVertices[i]);
+            {                
+                for (var i = 0; i < viewVertices.Count; ++i) viewVertices[i] = mat_apply(ref projectionViewMatrix, uniqueVertices[i]) * viewScale;
 
                 GL.MatrixMode(MatrixMode.Projection);
                 GL.LoadMatrix(overlayProjectionMatrix);
@@ -1800,50 +1912,60 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             GL.LineWidth(1.0f);
             GL.Begin(PrimitiveType.Lines);
-            GL.Color4(0.2f, 1.0f, 0.2f, 1.0f);
-
-            if (iP1 > -1) overlay_mark(oP1.X, oP1.Y, 4.0f);
-            if (iP2 > -1) overlay_mark(oP2.X, oP2.Y, 4.0f);
-            if (iP3 > -1) overlay_mark(oP3.X, oP3.Y, 4.0f);
+            if (iP1 > -1) overlay_mark(viewVertices[iP1], 4.0f, Color.Red);
+            if (iP2 > -1) overlay_mark(viewVertices[iP2], 4.0f, Color.Lime);
+            if (iP3 > -1) overlay_mark(viewVertices[iP3], 4.0f, Color.Blue);
             GL.End();
 
             GL.LineWidth(2.0f);
-            GL.Begin(PrimitiveType.Lines);
-            GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
+            GL.Begin(PrimitiveType.Lines);            
 
             if ((iP1 > -1) && (iP2 > -1))
             {
-                GL.Vertex3(oP1.X, oP1.Y, 3.0f);
-                GL.Vertex3(oP2.X, oP2.Y, 3.0f);
+                GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
+                overlay_line(viewVertices[iP1], viewVertices[iP2]);
+                oM12 = transformForView(M12);
+                overlay_mark(oM12, 2.0f, Color.White);
             }
             if ((iP2 > -1) && (iP3 > -1))
             {
-                GL.Vertex3(oP2.X, oP2.Y, 3.0f);
-                GL.Vertex3(oP3.X, oP3.Y, 3.0f);
+                GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
+                overlay_line(viewVertices[iP2], viewVertices[iP3]);
+                oM23 = transformForView(M23);
+                overlay_mark(oM23, 2.0f, Color.White);
             }
             if ((iP3 > -1) && (iP1 > -1))
             {
-                GL.Vertex3(oP3.X, oP3.Y, 3.0f);
-                GL.Vertex3(oP1.X, oP1.Y, 3.0f);
+                GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
+                overlay_line(viewVertices[iP3], viewVertices[iP1]);
+                oM31 = transformForView(M31);
+                overlay_mark(oM31, 2.0f, Color.White);
             }
 
             GL.End();
             GL.LineWidth(1.0f);
         }
 
-        private void overlay_mark(float x, float y, float hSize)
+        private void overlay_line(Vector3 vector1, Vector3 vector2)
         {
-            GL.Vertex3(x - hSize, y - hSize, 2.0f);
-            GL.Vertex3(x - hSize, y + hSize, 2.0f);
+            GL.Vertex3(vector1.X, vector1.Y, 3.0f);
+            GL.Vertex3(vector2.X, vector2.Y, 3.0f);
+        }
 
-            GL.Vertex3(x - hSize, y + hSize, 2.0f);
-            GL.Vertex3(x + hSize, y + hSize, 2.0f);
+        private void overlay_mark(Vector3 v, float hSize, Color col)
+        {
+            GL.Color4(col);
+            GL.Vertex3(v.X - hSize, v.Y - hSize, 2.0f);
+            GL.Vertex3(v.X - hSize, v.Y + hSize, 2.0f);
 
-            GL.Vertex3(x + hSize, y + hSize, 2.0f);
-            GL.Vertex3(x + hSize, y - hSize, 2.0f);
+            GL.Vertex3(v.X - hSize, v.Y + hSize, 2.0f);
+            GL.Vertex3(v.X + hSize, v.Y + hSize, 2.0f);
 
-            GL.Vertex3(x + hSize, y - hSize, 2.0f);
-            GL.Vertex3(x - hSize, y - hSize, 2.0f);
+            GL.Vertex3(v.X + hSize, v.Y + hSize, 2.0f);
+            GL.Vertex3(v.X + hSize, v.Y - hSize, 2.0f);
+
+            GL.Vertex3(v.X + hSize, v.Y - hSize, 2.0f);
+            GL.Vertex3(v.X - hSize, v.Y - hSize, 2.0f);
         }
 
         private void overlay_selector(float x, float y)
