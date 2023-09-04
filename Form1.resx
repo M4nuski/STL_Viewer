@@ -133,6 +133,7 @@ W: Toggle wireframe mode
 O: Cycle outline modes
 
 M: Open mesuring tools (hold 1 2 3 to select point)
+ESC: Clear points
 F11: Open center compensation controls
 F12: Open surface compensation controls
 Ctrl-S: Save compensated model</value>

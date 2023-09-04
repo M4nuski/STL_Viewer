@@ -150,12 +150,15 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         private Vector4 holeColor = new Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 
         private bool wiremode = false;
+        private const int numCylSection = 64; // default cylinder around y
+        private Vector3[] baseCylVertices = new Vector3[numCylSection];
 
         // For mesurements
         private List<Vector3> viewVertices = new List<Vector3>();
         private int iP1, iP2, iP3 = -1; // vertex indices of selected points
-        private Vector3 P1, P2, P3, M12, M23, M31, C123, N123; // vector data
-        private Vector3 oM12, oM23, oM31, oC123, oN123; // overlay vector positions
+        private Vector3 P1, P2, P3, M12, M23, M31, C1, C2, C3, C123, N123; // vector data
+        private float D123;
+        private bool bCIRCLE = false;
         private int MesureSelectingPoint = 0; // 1 2 3
         private const float MesureSelectingMaxDistSquare = 100.0f;
 
@@ -207,8 +210,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             setPerspective(_fov, viewWidthF / viewHeightF, 0.1f, 4096.0f);
             setOrtho(viewWidthF, viewHeightF, 1.0f, 100.0f);
 
-
             pivot = new Vector3(0.0f, 0.0f, 0.0f);
+            for (var i = 0; i < numCylSection; ++i)
+            {
+                baseCylVertices[i].X = (float)Math.Sin(2.0 * Math.PI * i / numCylSection);
+                baseCylVertices[i].Z = (float)Math.Cos(2.0 * Math.PI * i / numCylSection);
+            }
+
+
             var args = Environment.GetCommandLineArgs();
 
             currentFile = args.Length > 1 ? args[1] : "";
@@ -266,13 +275,19 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         }
         private void Form1_Activated(object sender, EventArgs e)
         {
+            comboBoxLENUnit.SelectedIndex = 0;
+
             comboBoxLEN1.SelectedIndex = 0;
             comboBoxLEN2.SelectedIndex = 1;
-            comboBoxLENUnit.SelectedIndex = 0;
+
             comboBoxANG1.SelectedIndex = 0;
             comboBoxANG2.SelectedIndex = 1;
             comboBoxANG3.SelectedIndex = 1;
             comboBoxANG4.SelectedIndex = 2;
+
+            comboBoxCIRCLE1.SelectedIndex = 0;
+            comboBoxCIRCLE2.SelectedIndex = 1;
+            comboBoxCIRCLE3.SelectedIndex = 2;
         }
         #endregion
 
@@ -648,6 +663,13 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                // Mselecting = true;
                 MesureSelectingPoint = 3;
             }
+            if ((e.KeyCode == Keys.Escape)  && MesurementsPanel.Visible)
+            {
+                iP1 = -1;
+                iP2 = -1;
+                iP3 = -1;
+                MesureSelectingPoint = 0;
+            }
 
             ReDraw();
         }
@@ -911,95 +933,62 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             GL.NewList(compList, ListMode.Compile);
             drawModel(!false, loader.Triangles.Count, newData);
             GL.EndList();
-            //Console.WriteLine("Gen model compList data yields " + GL.GetError());
-
 
             GL.DeleteLists(holeList, 1);
             holeList = GL.GenLists(1);
             GL.NewList(holeList, ListMode.Compile);
             GL.Begin(PrimitiveType.Lines);
 
-            // GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Diffuse, holeColor);
-            // GL.Material(MaterialFace.FrontAndBack, MaterialParameter.Ambient, holeColor);
-            var maxOffset = bbData.maxY + 0.001f;
-            var midOffset = bbData.maxY / 2.0f;
-            var lowOffset = -0.001f;
-            yOffset = -yOffset;
+            var cylData = new Vector3[numCylSection];
 
+            var maxOffset = new Vector3(0.0f, -yOffset, 0.0f);
+            var midOffset = new Vector3(0.0f, -yOffset, 0.0f);
+            var minOffset = new Vector3(0.0f, -yOffset, 0.0f);
+            // TODO add actual selected center offset per C123 and N123
             if (holeAxisRadioButtonX.Checked)
             {
-                maxOffset = bbData.maxX + 0.001f;
-                midOffset = 0.001f;
-                lowOffset = bbData.minX - 0.001f;
+                maxOffset.X = bbData.maxX + 0.001f;
+                midOffset.X = 0.0f;
+                minOffset.X = bbData.minX - 0.001f;
+
+                var m = new float[16];
+                mat_rotation(1.5707f, Vector3.UnitZ, ref m);
+                for (var i = 0; i < numCylSection; ++i) cylData[i] = mat_apply(ref m, baseCylVertices[i]);
+            }
+            if (holeAxisRadioButtonY.Checked)
+            {
+                maxOffset.Y = bbData.maxY + 0.001f;
+                midOffset.Y = bbData.maxY / 2.0f;
+                minOffset.Y = -0.001f;
+
+                for (var i = 0; i < numCylSection; ++i) cylData[i] = baseCylVertices[i];
             }
             if (holeAxisRadioButtonZ.Checked)
             {
-                maxOffset = bbData.maxZ + 0.001f;
-                midOffset = 0.001f;
-                lowOffset = bbData.minZ - 0.001f;
+                maxOffset.Z = bbData.maxZ + 0.001f;
+                midOffset.Z = 0.0f;
+                minOffset.Z = bbData.minZ - 0.001f;
+
+                var m = new float[16];
+                mat_rotation(1.5707f, Vector3.UnitX, ref m);
+                for (var i = 0; i < numCylSection; ++i) cylData[i] = mat_apply(ref m, baseCylVertices[i]);
             }
 
-            for (var i = 0; i < 64; i++)
+            yOffset = -yOffset; // ???
+
+            GL.Color4(holeColor);
+            for (var i = 0; i < numCylSection; ++i)
             {
-                var s1 = limit * Math.Sin(2 * Math.PI * i / 64);
-                var c1 = limit * Math.Cos(2 * Math.PI * i / 64);
+                GL.Vertex3(limit * cylData[i] + minOffset);
+                GL.Vertex3(limit * cylData[(i + 1) % numCylSection] + minOffset);
 
-                var s2 = limit * Math.Sin(2 * Math.PI * (i + 1) / 64);
-                var c2 = limit * Math.Cos(2 * Math.PI * (i + 1) / 64);
+                GL.Vertex3(limit * cylData[i] + midOffset);
+                GL.Vertex3(limit * cylData[(i + 1) % numCylSection] + midOffset);
 
-                if (holeAxisRadioButtonX.Checked)
-                {
-                    GL.Color4(holeColor);
-                    GL.Vertex3(lowOffset, s1 + yOffset, c1);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(lowOffset, s2 + yOffset, c2);
-
-                    GL.Color4(holeColor);
-                    GL.Vertex3(midOffset, s1 + yOffset, c1);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(midOffset, s2 + yOffset, c2);
-
-                    GL.Color4(holeColor);
-                    GL.Vertex3(maxOffset, s1 + yOffset, c1);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(maxOffset, s2 + yOffset, c2);
-                }
-                if (holeAxisRadioButtonY.Checked)
-                {
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s1, lowOffset, c1);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s2, lowOffset, c2);
-
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s1, midOffset, c1);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s2, midOffset, c2);
-
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s1, maxOffset, c1);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s2, maxOffset, c2);
-                }
-                if (holeAxisRadioButtonZ.Checked)
-                {
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s1, c1 + yOffset, lowOffset);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s2, c2 + yOffset, lowOffset);
-
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s1, c1 + yOffset, midOffset);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s2, c2 + yOffset, midOffset);
-
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s1, c1 + yOffset, maxOffset);
-                    GL.Color4(holeColor);
-                    GL.Vertex3(s2, c2 + yOffset, maxOffset);
-                }
-
+                GL.Vertex3(limit * cylData[i] + maxOffset);
+                GL.Vertex3(limit * cylData[(i + 1) % numCylSection] + maxOffset);
             }
+
             GL.End();
             GL.EndList();
 
@@ -1461,6 +1450,40 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             return new Vector3((p1.X + p2.X) / 2.0f, (p1.Y + p2.Y) / 2.0f, (p1.Z + p2.Z) / 2.0f);
         }
+        private Vector3 transformForView(Vector3 v)
+        {
+            return mat_apply(ref projectionViewMatrix, v) * viewScale;
+        }
+
+        private bool selectPointFromComboIndex(int i, ref Vector3 v)
+        {
+            switch (i)
+            {
+                case 0: // P1
+                    v = P1;
+                    return (iP1 > -1);
+                case 1: // P2
+                    v = P2;
+                    return (iP2 > -1);
+                case 2: // P3
+                    v = P3;
+                    return (iP3 > -1);
+                case 3: // M12
+                    v = M12;
+                    return ((iP1 > -1) && (iP2 > -1));
+                case 4: // M23
+                    v = M23;
+                    return ((iP2 > -1) && (iP3 > -1));
+                case 5: // M31
+                    v = M31;
+                    return ((iP3 > -1) && (iP1 > -1));
+                case 6: // C123
+                    v = C123;
+                    return (bCIRCLE);
+            }
+            return false;
+        }
+
 
         #endregion
 
@@ -1541,24 +1564,49 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             return a;
         }
+
+        private void mat_rotation(float ang, Vector3 v, ref float[] res)
+        {
+            res = new float[16];
+
+            var x = v.X;
+            var y = v.Y;
+            var z = v.Z;
+
+            var len = (float)Math.Sqrt(x * x + y * y + z * z);
+            if (len < epsilon) return;
+
+            x /= len;
+            y /= len;
+            z /= len;
+
+            var s = (float)Math.Sin(ang);
+            var c = (float)Math.Cos(ang);
+            var t = 1.0f - c;
+
+            res[0] = x * x * t + c;
+            res[1] = y * x * t + z * s;
+            res[2] = z * x * t - y * s;
+            res[3] = 0.0f;
+
+            res[4] = x * y * t - z * s;
+            res[5] = y * y * t + c;
+            res[6] = z * y * t + x * s;
+            res[7] = 0.0f;
+
+            res[8] = x * z * t + y * s;
+            res[9] = y * z * t - x * s;
+            res[10] = z * z * t + c;
+            res[11] = 0.0f;
+
+            res[12] = 0.0f;
+            res[13] = 0.0f;
+            res[14] = 0.0f;
+            res[15] = 1.0f;
+        }
         #endregion
 
         #region mesurements methods
-        /*if (iP1 > -1)
-        {
-            oP1.X = viewVertices[iP1].X * halfViewWidth;
-            oP1.Y = viewVertices[iP1].Y * halfViewHeight;
-        }
-        if (iP2 > -1)
-        {
-            oP2.X = viewVertices[iP2].X * halfViewWidth;
-            oP2.Y = viewVertices[iP2].Y * halfViewHeight;
-        }
-        if (iP3 > -1)
-        {
-            oP3.X = viewVertices[iP3].X * halfViewWidth;
-            oP3.Y = viewVertices[iP3].Y * halfViewHeight;
-        }*/
 
         private void checkPointSelect(int X, int Y)
         {
@@ -1567,9 +1615,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var oldP3index = iP3;
 
             var newIndex = -1;
-            // find Px
-            // check all and keep closest within max distance
-            // MesureSelectingMaxDistSquare
+
             var d = MesureSelectingMaxDistSquare;
             var mousePoint = new Vector3(X - halfViewWidthF, -Y + halfViewHeightF, 0.0f);
             for (var i = 0; i < viewVertices.Count; ++i)
@@ -1592,65 +1638,29 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             ReDraw();
         }
 
+        private void MesureShowCircleCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            ReDraw();
+        }
+
         private void comboBoxLEN1_SelectedIndexChanged(object sender, EventArgs e)
         {
             updateMesurePanelData();
+            ReDraw();
         }
-
-        private string formatMesure(float m)
+ 
+        private string formatMesure(float m, bool extendPrec = false)
         {
             if (comboBoxLENUnit.SelectedIndex == 0)
             {
-                return m.ToString("F2");
+                return m.ToString(extendPrec ? ("F3") : ("F2"));
             }
             else
             {
-                return (m / 25.4f).ToString("F3");
+                return (m / 25.4f).ToString(extendPrec ? ("F4") : ("F3"));
             }
         }
 
-        private Vector3 transformForView(Vector3 v)
-        {
-            return mat_apply(ref projectionViewMatrix, v) * viewScale;
-        }
-
-        /*
-            Point 1
-            Point 2
-            Point 3
-            MidPoint 1-2
-            MidPoint 2-3
-            MidPoint 3-1
-            Center 1-2-3
-                    */
-        private bool selectPointFromComboIndex(int i, ref Vector3 v)
-        {
-            switch (i)
-            {
-                case 0: // P1
-                    v = P1;
-                    return (iP1 > -1);
-                case 1: // P2
-                    v = P2;
-                    return (iP2 > -1);
-                case 2: // P3
-                    v = P3;
-                    return (iP3 > -1);
-                case 3: // M12
-                    v = M12;
-                    return ((iP1 > -1) && (iP2 > -1));
-                case 4: // M23
-                    v = M23;
-                    return ((iP2 > -1) && (iP3 > -1));
-                case 5: // M31
-                    v = M31;
-                    return ((iP3 > -1) && (iP1 > -1));
-                case 6: // C123
-                    v = C123;
-                    return ((iP1 > -1) && (iP2 > -1) && (iP3 > -1));
-            }
-            return false;
-        }
         private void updateMesurePanelData()
         {
             resetMesurePanel();
@@ -1705,7 +1715,29 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 labelMID31Z.Text = "Z: " + formatMesure(M31.Z);
             }
 
-            // P1P2P3 circle // TODO : add selector for 3 points
+            // circle
+            bCIRCLE = (comboBoxCIRCLE1.SelectedIndex != comboBoxCIRCLE2.SelectedIndex) && (comboBoxCIRCLE2.SelectedIndex != comboBoxCIRCLE3.SelectedIndex);
+            if (bCIRCLE) bCIRCLE = selectPointFromComboIndex(comboBoxCIRCLE1.SelectedIndex, ref C1) && selectPointFromComboIndex(comboBoxCIRCLE2.SelectedIndex, ref C2) && selectPointFromComboIndex(comboBoxCIRCLE3.SelectedIndex, ref C3);
+            if (bCIRCLE)
+            {
+                var vA = C1 - C2;
+                var vB = C3 - C1;
+                N123 = Vector3.Cross(vA, vB);
+                N123.Normalize();
+                labelNOR123X.Text = "X: " + formatMesure(N123.X);
+                labelNOR123Y.Text = "Y: " + formatMesure(N123.Y);
+                labelNOR123Z.Text = "Z: " + formatMesure(N123.Z);
+
+                Vector3 N123p;
+                C123 = CircleCenter(C1, C2, C3, out N123p);
+                labelCEN123X.Text = "X: " + formatMesure(C123.X);
+                labelCEN123Y.Text = "Y: " + formatMesure(C123.Y);
+                labelCEN123Z.Text = "Z: " + formatMesure(C123.Z);
+
+                D123 = Vector3.Distance(C123, C1) * 2.0f;
+                labelDIA123.Text = formatMesure(D123, true);
+                labelRAD123.Text = formatMesure(D123 / 2.0f, true);
+            }
 
             // Length
             var pA = new Vector3(0.0f);
@@ -1723,6 +1755,35 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             {
                 labelANG.Text = (57.2957f * Vector3.CalculateAngle(pA - pB, pD - pC)).ToString("F1");
             }
+        }
+
+        private static Vector3 CircleCenter(Vector3 aP0, Vector3 aP1, Vector3 aP2, out Vector3 normal)
+        // https://github.com/Bunny83/Utilities/blob/master/MathHelper.cs#L127
+        {
+            // two circle chords
+            var v1 = aP1 - aP0;
+            var v2 = aP2 - aP0;
+
+            normal = Vector3.Cross(v1, v2);
+            if (normal.LengthSquared < 0.00001f)
+                return new Vector3(float.NaN);
+            normal.Normalize();
+
+            // perpendicular of both chords
+            var p1 = Vector3.Cross(v1, normal);
+            p1.Normalize();
+            var p2 = Vector3.Cross(v2, normal);
+            p2.Normalize();
+            // distance between the chord midpoints
+            var r = (v1 - v2) * 0.5f;
+            // center angle between the two perpendiculars
+            var c = Vector3.CalculateAngle(p1, p2);
+            // angle between first perpendicular and chord midpoint vector
+            var a = Vector3.CalculateAngle(r, p1);
+            // law of sine to calculate length of p2
+            var d = (float)(r.Length * Math.Sin(a) / Math.Sin(c));
+            if (Vector3.Dot(v1, aP2 - aP1) > 0) return aP0 + v2 * 0.5f - p2 * d;
+            return aP0 + v2 * 0.5f + p2 * d;
         }
 
         private void resetMesurePanel()
@@ -1755,6 +1816,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             labelMID31Z.Text = "Z: " + defaultLabelText;
 
             labelDIA123.Text = defaultLabelText;
+            labelRAD123.Text = defaultLabelText;
 
             labelCEN123X.Text = "X: " + defaultLabelText;
             labelCEN123Y.Text = "Y: " + defaultLabelText;
@@ -1965,31 +2027,70 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (iP1 > -1) overlay_mark(viewVertices[iP1], 4.0f, Color.Red);
             if (iP2 > -1) overlay_mark(viewVertices[iP2], 4.0f, Color.Lime);
             if (iP3 > -1) overlay_mark(viewVertices[iP3], 4.0f, Color.Blue);
+
+            if ((iP1 > -1) && (iP2 > -1)) overlay_mark(transformForView(M12), 2.0f, Color.White);
+            if ((iP2 > -1) && (iP3 > -1)) overlay_mark(transformForView(M23), 2.0f, Color.White);
+            if ((iP3 > -1) && (iP1 > -1)) overlay_mark(transformForView(M31), 2.0f, Color.White);
             GL.End();
 
             GL.LineWidth(2.0f);
             GL.Begin(PrimitiveType.Lines);            
+            GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
 
-            if ((iP1 > -1) && (iP2 > -1))
+            if ((iP1 > -1) && (iP2 > -1)) overlay_line(viewVertices[iP1], viewVertices[iP2]);
+            if ((iP2 > -1) && (iP3 > -1)) overlay_line(viewVertices[iP2], viewVertices[iP3]);
+            if ((iP3 > -1) && (iP1 > -1)) overlay_line(viewVertices[iP3], viewVertices[iP1]);
+
+            if (bCIRCLE)
             {
-                GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
-                overlay_line(viewVertices[iP1], viewVertices[iP2]);
-                oM12 = transformForView(M12);
-                overlay_mark(oM12, 2.0f, Color.White);
+                if (MesureShowCircleCheckBox.Checked)
+                {
+                    var oC123 = transformForView(C123);
+                    overlay_mark(oC123, 2.0f, Color.Yellow);
+                    GL.Color4(1.0f, 1.0f, 0.0f, 1.0f);
+                    var oN123 = transformForView(C123 + (N123 * 10.0f));
+                    overlay_line(oC123, oN123);
+                    overlay_circle_DO_TFV(C123, N123, D123);
+                } else
+                {
+                    var midC = (C1 + C2 + C3) / 3.0f;
+                    GL.Color4(1.0f, 1.0f, 0.0f, 1.0f);
+                    var oN123 = transformForView(midC + (N123 * 5.0f));
+                    overlay_line(transformForView(midC), oN123);
+                }
             }
-            if ((iP2 > -1) && (iP3 > -1))
+
+            GL.End();
+            GL.LineWidth(3.0f);
+
+            GL.Begin(PrimitiveType.Lines);
+
+            if (MesureShowDistanceCheckBox.Checked)
             {
-                GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
-                overlay_line(viewVertices[iP2], viewVertices[iP3]);
-                oM23 = transformForView(M23);
-                overlay_mark(oM23, 2.0f, Color.White);
+                GL.Color4(1.0f, 0.0f, 1.0f, 1.0f);
+                var pA = new Vector3(0.0f);
+                var pB = new Vector3(0.0f);
+                if (selectPointFromComboIndex(comboBoxLEN1.SelectedIndex, ref pA) && selectPointFromComboIndex(comboBoxLEN2.SelectedIndex, ref pB))
+                {
+                    overlay_line(transformForView(pA), transformForView(pB));
+                }
             }
-            if ((iP3 > -1) && (iP1 > -1))
+            if (MesureShowAngleCheckBox.Checked)
             {
-                GL.Color4(0.2f, 0.2f, 1.0f, 1.0f);
-                overlay_line(viewVertices[iP3], viewVertices[iP1]);
-                oM31 = transformForView(M31);
-                overlay_mark(oM31, 2.0f, Color.White);
+                // Angle
+                var pA = new Vector3(0.0f);
+                var pB = new Vector3(0.0f);
+                var pC = new Vector3(0.0f);
+                var pD = new Vector3(0.0f);
+                if (selectPointFromComboIndex(comboBoxANG1.SelectedIndex, ref pA) && selectPointFromComboIndex(comboBoxANG2.SelectedIndex, ref pB) &&
+                    selectPointFromComboIndex(comboBoxANG3.SelectedIndex, ref pC) && selectPointFromComboIndex(comboBoxANG4.SelectedIndex, ref pD))
+                {
+                    GL.Color4(0.0f, 1.0f, 1.0f, 1.0f);
+                    overlay_line(transformForView(pA), transformForView(pB));
+
+                    GL.Color4(0.0f, 1.0f, 1.0f, 1.0f);
+                    overlay_line(transformForView(pC), transformForView(pD));
+                }
             }
 
             GL.End();
@@ -2018,23 +2119,33 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             GL.Vertex3(v.X - hSize, v.Y - hSize, 2.0f);
         }
 
-        private void overlay_selector(float x, float y)
+        private void overlay_circle_DO_TFV(Vector3 c, Vector3 n, float d)
         {
-            var hSize = 4.0f;
-            GL.Color4(1.0f, 0.2f, 0.2f, 1.0f);
-            GL.Vertex3(x - hSize, y - hSize, 2.0f);
-            GL.Vertex3(x - hSize, y + hSize, 2.0f);
+            var cylData = new Vector3[numCylSection];
+            d = d / 2.0f;
+            var p = Vector3.Cross(n, Vector3.UnitY);
+            if (p.LengthSquared > epsilon)
+            {
+                var a = Vector3.CalculateAngle(n, Vector3.UnitY);
+                var m = new float[16];
+                mat_rotation(-a, p, ref m);
+                for (var i = 0; i < numCylSection; ++i) cylData[i] = mat_apply(ref m, baseCylVertices[i]);
+            } else
+            {
+                for(var i = 0; i < numCylSection; ++i) cylData[i] =baseCylVertices[i];
+            }
 
-            GL.Vertex3(x - hSize, y + hSize, 2.0f);
-            GL.Vertex3(x + hSize, y + hSize, 2.0f);
+            for (var i = 0; i < numCylSection; ++i)
+            {
+                var v1 = (d * cylData[i]) + c;
+                var v2 = (d * cylData[(i + 1) % numCylSection]) + c;
 
-            GL.Vertex3(x + hSize, y + hSize, 2.0f);
-            GL.Vertex3(x + hSize, y - hSize, 2.0f);
-
-            GL.Vertex3(x + hSize, y - hSize, 2.0f);
-            GL.Vertex3(x - hSize, y - hSize, 2.0f);
+                GL.Vertex3(transformForView(v1));
+                GL.Vertex3(transformForView(v2));
+            }
         }
-        
+
+       
         private void drawBuildVolume()
         {
             // back

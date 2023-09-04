@@ -30,6 +30,15 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.MesurementsPanel = new System.Windows.Forms.Panel();
+            this.label14 = new System.Windows.Forms.Label();
+            this.comboBoxCIRCLE3 = new System.Windows.Forms.ComboBox();
+            this.comboBoxCIRCLE2 = new System.Windows.Forms.ComboBox();
+            this.comboBoxCIRCLE1 = new System.Windows.Forms.ComboBox();
+            this.label13 = new System.Windows.Forms.Label();
+            this.label11 = new System.Windows.Forms.Label();
+            this.labelRAD123 = new System.Windows.Forms.Label();
+            this.MesureShowAngleCheckBox = new System.Windows.Forms.CheckBox();
+            this.MesureShowCircleCheckBox = new System.Windows.Forms.CheckBox();
             this.comboBoxANG4 = new System.Windows.Forms.ComboBox();
             this.comboBoxANG2 = new System.Windows.Forms.ComboBox();
             this.comboBoxANG3 = new System.Windows.Forms.ComboBox();
@@ -75,6 +84,7 @@
             this.label10 = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
+            this.MesureShowDistanceCheckBox = new System.Windows.Forms.CheckBox();
             this.holeCompPanel = new System.Windows.Forms.Panel();
             this.holeRefComboBox = new System.Windows.Forms.ComboBox();
             this.holeAxisRadioButtonC123 = new System.Windows.Forms.RadioButton();
@@ -113,6 +123,15 @@
             this.MesurementsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.MesurementsPanel.BackColor = System.Drawing.SystemColors.Control;
             this.MesurementsPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.MesurementsPanel.Controls.Add(this.label14);
+            this.MesurementsPanel.Controls.Add(this.comboBoxCIRCLE3);
+            this.MesurementsPanel.Controls.Add(this.comboBoxCIRCLE2);
+            this.MesurementsPanel.Controls.Add(this.comboBoxCIRCLE1);
+            this.MesurementsPanel.Controls.Add(this.label13);
+            this.MesurementsPanel.Controls.Add(this.label11);
+            this.MesurementsPanel.Controls.Add(this.labelRAD123);
+            this.MesurementsPanel.Controls.Add(this.MesureShowAngleCheckBox);
+            this.MesurementsPanel.Controls.Add(this.MesureShowCircleCheckBox);
             this.MesurementsPanel.Controls.Add(this.comboBoxANG4);
             this.MesurementsPanel.Controls.Add(this.comboBoxANG2);
             this.MesurementsPanel.Controls.Add(this.comboBoxANG3);
@@ -158,15 +177,126 @@
             this.MesurementsPanel.Controls.Add(this.label10);
             this.MesurementsPanel.Controls.Add(this.label9);
             this.MesurementsPanel.Controls.Add(this.label8);
+            this.MesurementsPanel.Controls.Add(this.MesureShowDistanceCheckBox);
             this.MesurementsPanel.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.MesurementsPanel.Location = new System.Drawing.Point(875, 4);
             this.MesurementsPanel.Name = "MesurementsPanel";
-            this.MesurementsPanel.Size = new System.Drawing.Size(301, 333);
+            this.MesurementsPanel.Size = new System.Drawing.Size(301, 370);
             this.MesurementsPanel.TabIndex = 8;
             this.MesurementsPanel.Visible = false;
             // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(103, 216);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(46, 18);
+            this.label14.TabIndex = 64;
+            this.label14.Text = "Circle";
+            // 
+            // comboBoxCIRCLE3
+            // 
+            this.comboBoxCIRCLE3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.comboBoxCIRCLE3.FormattingEnabled = true;
+            this.comboBoxCIRCLE3.Items.AddRange(new object[] {
+            "Point 1",
+            "Point 2",
+            "Point 3",
+            "MidPoint 1-2",
+            "MidPoint 2-3",
+            "MidPoint 3-1"});
+            this.comboBoxCIRCLE3.Location = new System.Drawing.Point(103, 278);
+            this.comboBoxCIRCLE3.Name = "comboBoxCIRCLE3";
+            this.comboBoxCIRCLE3.Size = new System.Drawing.Size(86, 21);
+            this.comboBoxCIRCLE3.TabIndex = 63;
+            this.comboBoxCIRCLE3.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
+            // 
+            // comboBoxCIRCLE2
+            // 
+            this.comboBoxCIRCLE2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.comboBoxCIRCLE2.FormattingEnabled = true;
+            this.comboBoxCIRCLE2.Items.AddRange(new object[] {
+            "Point 1",
+            "Point 2",
+            "Point 3",
+            "MidPoint 1-2",
+            "MidPoint 2-3",
+            "MidPoint 3-1"});
+            this.comboBoxCIRCLE2.Location = new System.Drawing.Point(103, 256);
+            this.comboBoxCIRCLE2.Name = "comboBoxCIRCLE2";
+            this.comboBoxCIRCLE2.Size = new System.Drawing.Size(86, 21);
+            this.comboBoxCIRCLE2.TabIndex = 62;
+            this.comboBoxCIRCLE2.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
+            // 
+            // comboBoxCIRCLE1
+            // 
+            this.comboBoxCIRCLE1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.comboBoxCIRCLE1.FormattingEnabled = true;
+            this.comboBoxCIRCLE1.Items.AddRange(new object[] {
+            "Point 1",
+            "Point 2",
+            "Point 3",
+            "MidPoint 1-2",
+            "MidPoint 2-3",
+            "MidPoint 3-1"});
+            this.comboBoxCIRCLE1.Location = new System.Drawing.Point(103, 234);
+            this.comboBoxCIRCLE1.Name = "comboBoxCIRCLE1";
+            this.comboBoxCIRCLE1.Size = new System.Drawing.Size(86, 21);
+            this.comboBoxCIRCLE1.TabIndex = 61;
+            this.comboBoxCIRCLE1.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(3, 345);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(46, 18);
+            this.label13.TabIndex = 60;
+            this.label13.Text = "Units:";
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(3, 180);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(54, 18);
+            this.label11.TabIndex = 59;
+            this.label11.Text = "Radius";
+            // 
+            // labelRAD123
+            // 
+            this.labelRAD123.AutoSize = true;
+            this.labelRAD123.Location = new System.Drawing.Point(3, 198);
+            this.labelRAD123.Name = "labelRAD123";
+            this.labelRAD123.Size = new System.Drawing.Size(52, 18);
+            this.labelRAD123.TabIndex = 58;
+            this.labelRAD123.Text = "225.00";
+            // 
+            // MesureShowAngleCheckBox
+            // 
+            this.MesureShowAngleCheckBox.AutoSize = true;
+            this.MesureShowAngleCheckBox.Location = new System.Drawing.Point(203, 342);
+            this.MesureShowAngleCheckBox.Name = "MesureShowAngleCheckBox";
+            this.MesureShowAngleCheckBox.Size = new System.Drawing.Size(98, 22);
+            this.MesureShowAngleCheckBox.TabIndex = 57;
+            this.MesureShowAngleCheckBox.Text = "Show Ang.";
+            this.MesureShowAngleCheckBox.UseVisualStyleBackColor = true;
+            this.MesureShowAngleCheckBox.CheckedChanged += new System.EventHandler(this.MesureShowCircleCheckBox_CheckedChanged);
+            // 
+            // MesureShowCircleCheckBox
+            // 
+            this.MesureShowCircleCheckBox.AutoSize = true;
+            this.MesureShowCircleCheckBox.Location = new System.Drawing.Point(103, 300);
+            this.MesureShowCircleCheckBox.Name = "MesureShowCircleCheckBox";
+            this.MesureShowCircleCheckBox.Size = new System.Drawing.Size(100, 22);
+            this.MesureShowCircleCheckBox.TabIndex = 55;
+            this.MesureShowCircleCheckBox.Text = "Show Circ.";
+            this.MesureShowCircleCheckBox.UseVisualStyleBackColor = true;
+            this.MesureShowCircleCheckBox.CheckedChanged += new System.EventHandler(this.MesureShowCircleCheckBox_CheckedChanged);
+            // 
             // comboBoxANG4
             // 
+            this.comboBoxANG4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxANG4.FormattingEnabled = true;
             this.comboBoxANG4.Items.AddRange(new object[] {
             "Point 1",
@@ -175,15 +305,16 @@
             "MidPoint 1-2",
             "MidPoint 2-3",
             "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxANG4.Location = new System.Drawing.Point(189, 303);
+            "Circle Center"});
+            this.comboBoxANG4.Location = new System.Drawing.Point(203, 300);
             this.comboBoxANG4.Name = "comboBoxANG4";
-            this.comboBoxANG4.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxANG4.Size = new System.Drawing.Size(86, 21);
             this.comboBoxANG4.TabIndex = 54;
             this.comboBoxANG4.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
             // 
             // comboBoxANG2
             // 
+            this.comboBoxANG2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxANG2.FormattingEnabled = true;
             this.comboBoxANG2.Items.AddRange(new object[] {
             "Point 1",
@@ -192,15 +323,16 @@
             "MidPoint 1-2",
             "MidPoint 2-3",
             "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxANG2.Location = new System.Drawing.Point(189, 276);
+            "Circle Center"});
+            this.comboBoxANG2.Location = new System.Drawing.Point(203, 256);
             this.comboBoxANG2.Name = "comboBoxANG2";
-            this.comboBoxANG2.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxANG2.Size = new System.Drawing.Size(86, 21);
             this.comboBoxANG2.TabIndex = 53;
             this.comboBoxANG2.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
             // 
             // comboBoxANG3
             // 
+            this.comboBoxANG3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxANG3.FormattingEnabled = true;
             this.comboBoxANG3.Items.AddRange(new object[] {
             "Point 1",
@@ -209,15 +341,16 @@
             "MidPoint 1-2",
             "MidPoint 2-3",
             "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxANG3.Location = new System.Drawing.Point(80, 303);
+            "Circle Center"});
+            this.comboBoxANG3.Location = new System.Drawing.Point(203, 278);
             this.comboBoxANG3.Name = "comboBoxANG3";
-            this.comboBoxANG3.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxANG3.Size = new System.Drawing.Size(86, 21);
             this.comboBoxANG3.TabIndex = 52;
             this.comboBoxANG3.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
             // 
             // comboBoxANG1
             // 
+            this.comboBoxANG1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxANG1.FormattingEnabled = true;
             this.comboBoxANG1.Items.AddRange(new object[] {
             "Point 1",
@@ -226,17 +359,17 @@
             "MidPoint 1-2",
             "MidPoint 2-3",
             "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxANG1.Location = new System.Drawing.Point(80, 276);
+            "Circle Center"});
+            this.comboBoxANG1.Location = new System.Drawing.Point(203, 234);
             this.comboBoxANG1.Name = "comboBoxANG1";
-            this.comboBoxANG1.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxANG1.Size = new System.Drawing.Size(86, 21);
             this.comboBoxANG1.TabIndex = 51;
             this.comboBoxANG1.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
             // 
             // labelANG
             // 
             this.labelANG.AutoSize = true;
-            this.labelANG.Location = new System.Drawing.Point(3, 302);
+            this.labelANG.Location = new System.Drawing.Point(203, 324);
             this.labelANG.Name = "labelANG";
             this.labelANG.Size = new System.Drawing.Size(52, 18);
             this.labelANG.TabIndex = 50;
@@ -245,7 +378,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 284);
+            this.label1.Location = new System.Drawing.Point(203, 216);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(44, 18);
             this.label1.TabIndex = 49;
@@ -253,18 +386,20 @@
             // 
             // comboBoxLENUnit
             // 
+            this.comboBoxLENUnit.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxLENUnit.FormattingEnabled = true;
             this.comboBoxLENUnit.Items.AddRange(new object[] {
             "mm",
             "Inches"});
-            this.comboBoxLENUnit.Location = new System.Drawing.Point(242, 249);
+            this.comboBoxLENUnit.Location = new System.Drawing.Point(49, 344);
             this.comboBoxLENUnit.Name = "comboBoxLENUnit";
-            this.comboBoxLENUnit.Size = new System.Drawing.Size(55, 26);
+            this.comboBoxLENUnit.Size = new System.Drawing.Size(55, 21);
             this.comboBoxLENUnit.TabIndex = 48;
             this.comboBoxLENUnit.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
             // 
             // comboBoxLEN2
             // 
+            this.comboBoxLEN2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxLEN2.FormattingEnabled = true;
             this.comboBoxLEN2.Items.AddRange(new object[] {
             "Point 1",
@@ -273,15 +408,16 @@
             "MidPoint 1-2",
             "MidPoint 2-3",
             "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxLEN2.Location = new System.Drawing.Point(189, 222);
+            "Circle Center"});
+            this.comboBoxLEN2.Location = new System.Drawing.Point(3, 256);
             this.comboBoxLEN2.Name = "comboBoxLEN2";
-            this.comboBoxLEN2.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxLEN2.Size = new System.Drawing.Size(86, 21);
             this.comboBoxLEN2.TabIndex = 47;
             this.comboBoxLEN2.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
             // 
             // comboBoxLEN1
             // 
+            this.comboBoxLEN1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxLEN1.FormattingEnabled = true;
             this.comboBoxLEN1.Items.AddRange(new object[] {
             "Point 1",
@@ -290,10 +426,10 @@
             "MidPoint 1-2",
             "MidPoint 2-3",
             "MidPoint 3-1",
-            "Center 1-2-3"});
-            this.comboBoxLEN1.Location = new System.Drawing.Point(80, 222);
+            "Circle Center"});
+            this.comboBoxLEN1.Location = new System.Drawing.Point(3, 234);
             this.comboBoxLEN1.Name = "comboBoxLEN1";
-            this.comboBoxLEN1.Size = new System.Drawing.Size(108, 26);
+            this.comboBoxLEN1.Size = new System.Drawing.Size(86, 21);
             this.comboBoxLEN1.TabIndex = 46;
             this.comboBoxLEN1.SelectedIndexChanged += new System.EventHandler(this.comboBoxLEN1_SelectedIndexChanged);
             // 
@@ -329,9 +465,9 @@
             this.label21.AutoSize = true;
             this.label21.Location = new System.Drawing.Point(203, 144);
             this.label21.Name = "label21";
-            this.label21.Size = new System.Drawing.Size(85, 18);
+            this.label21.Size = new System.Drawing.Size(57, 18);
             this.label21.TabIndex = 42;
-            this.label21.Text = "Normal 123";
+            this.label21.Text = "Normal";
             // 
             // labelCEN123Z
             // 
@@ -365,9 +501,9 @@
             this.label22.AutoSize = true;
             this.label22.Location = new System.Drawing.Point(103, 144);
             this.label22.Name = "label22";
-            this.label22.Size = new System.Drawing.Size(80, 18);
+            this.label22.Size = new System.Drawing.Size(52, 18);
             this.label22.TabIndex = 38;
-            this.label22.Text = "Center 123";
+            this.label22.Text = "Center";
             // 
             // labelDIA123
             // 
@@ -383,9 +519,9 @@
             this.label12.AutoSize = true;
             this.label12.Location = new System.Drawing.Point(3, 144);
             this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(96, 18);
+            this.label12.Size = new System.Drawing.Size(68, 18);
             this.label12.TabIndex = 36;
-            this.label12.Text = "Diameter 123";
+            this.label12.Text = "Diameter";
             // 
             // labelMID31Z
             // 
@@ -498,7 +634,7 @@
             // labelLEN
             // 
             this.labelLEN.AutoSize = true;
-            this.labelLEN.Location = new System.Drawing.Point(3, 234);
+            this.labelLEN.Location = new System.Drawing.Point(5, 280);
             this.labelLEN.Name = "labelLEN";
             this.labelLEN.Size = new System.Drawing.Size(52, 18);
             this.labelLEN.TabIndex = 15;
@@ -620,6 +756,17 @@
             this.label8.Size = new System.Drawing.Size(54, 18);
             this.label8.TabIndex = 0;
             this.label8.Text = "Point 1";
+            // 
+            // MesureShowDistanceCheckBox
+            // 
+            this.MesureShowDistanceCheckBox.AutoSize = true;
+            this.MesureShowDistanceCheckBox.Location = new System.Drawing.Point(3, 299);
+            this.MesureShowDistanceCheckBox.Name = "MesureShowDistanceCheckBox";
+            this.MesureShowDistanceCheckBox.Size = new System.Drawing.Size(99, 22);
+            this.MesureShowDistanceCheckBox.TabIndex = 56;
+            this.MesureShowDistanceCheckBox.Text = "Show Dist.";
+            this.MesureShowDistanceCheckBox.UseVisualStyleBackColor = true;
+            this.MesureShowDistanceCheckBox.CheckedChanged += new System.EventHandler(this.MesureShowCircleCheckBox_CheckedChanged);
             // 
             // holeCompPanel
             // 
@@ -790,7 +937,7 @@
             this.compCtrlPanel.Controls.Add(this.label5);
             this.compCtrlPanel.Controls.Add(this.label4);
             this.compCtrlPanel.Controls.Add(this.label3);
-            this.compCtrlPanel.Location = new System.Drawing.Point(10, 413);
+            this.compCtrlPanel.Location = new System.Drawing.Point(3, 564);
             this.compCtrlPanel.Name = "compCtrlPanel";
             this.compCtrlPanel.Size = new System.Drawing.Size(510, 122);
             this.compCtrlPanel.TabIndex = 5;
@@ -876,7 +1023,7 @@
             this.label2.ForeColor = System.Drawing.Color.Black;
             this.label2.Location = new System.Drawing.Point(3, 4);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(344, 329);
+            this.label2.Size = new System.Drawing.Size(344, 347);
             this.label2.TabIndex = 1;
             this.label2.Text = resources.GetString("label2.Text");
             this.label2.Visible = false;
@@ -1026,6 +1173,16 @@
         private System.Windows.Forms.ComboBox comboBoxANG2;
         private System.Windows.Forms.ComboBox comboBoxANG3;
         private System.Windows.Forms.ComboBox comboBoxANG1;
+        private System.Windows.Forms.CheckBox MesureShowCircleCheckBox;
+        private System.Windows.Forms.CheckBox MesureShowAngleCheckBox;
+        private System.Windows.Forms.CheckBox MesureShowDistanceCheckBox;
+        private System.Windows.Forms.Label labelRAD123;
+        private System.Windows.Forms.ComboBox comboBoxCIRCLE3;
+        private System.Windows.Forms.ComboBox comboBoxCIRCLE2;
+        private System.Windows.Forms.ComboBox comboBoxCIRCLE1;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Label label14;
     }
 }
 
