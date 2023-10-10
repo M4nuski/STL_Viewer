@@ -857,8 +857,10 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             ReDraw();
         }
 
+        // TODO point
+        // TODO P1P2P3 axis
         private void centerCompTrackBar_ValueChanged(object sender, EventArgs e)
-        {
+        { 
             if (!holeCompPanel.Visible) return;
 
             // recomp with new value and reset all data and list
@@ -867,16 +869,49 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             if (holeCompModeComboBox.Text == "mm") comp *= 10.0f;
 
             var axisString = "Y";
-            if (holeAxisRadioButtonX.Checked) axisString = "X";
-            if (holeAxisRadioButtonY.Checked) axisString = "Y";
-            if (holeAxisRadioButtonZ.Checked) axisString = "Z";
+            Vector3 refAxis = new Vector3(0.0f, 1.0f, 0.0f);
 
-            statusLabel.Text = "Center hole radius limit:" + limit.ToString("F3") + " " + axisString + " Comp:" + comp.ToString("F3");
-            modString = axisString + " L" + holeLimitModeComboBox.Text + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C " + holeCompModeComboBox.Text + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
+            if (holeAxisRadioButtonX.Checked) {
+                axisString = "X";
+                refAxis = new Vector3(1.0f, 0.0f, 0.0f);
+            }
+            if (holeAxisRadioButtonY.Checked)
+            {
+                axisString = "Y";
+                refAxis = new Vector3(0.0f, 1.0f, 0.0f);
+            }
+            if (holeAxisRadioButtonZ.Checked)
+            {
+                axisString = "Z";
+                refAxis = new Vector3(0.0f, 0.0f, 1.0f);
+            }
+            if (holeAxisRadioButtonC123.Checked)
+            {
+                axisString = "N123";
+                refAxis = N123;
+            }
+
+            var pointString = "ModelCenter";
+            Vector3 refPoint = new Vector3(0.0f, bbData.maxY / 2.0f, 0.0f);
+            switch (holeRefComboBox.SelectedIndex)
+            {
+                case 0: break;
+                case 1: refPoint = P1;   pointString = "P1";   break;
+                case 2: refPoint = P2;   pointString = "P2";   break;
+                case 3: refPoint = P3;   pointString = "P3";   break;
+                case 4: refPoint = M12;  pointString = "M12";  break;
+                case 5: refPoint = M23;  pointString = "M23";  break;
+                case 6: refPoint = M31;  pointString = "M31";  break;
+                case 7: refPoint = C123; pointString = "C123"; break;
+            }
+
+
+            statusLabel.Text = "Hole radius limit: " + limit.ToString("F3") + " " + pointString + "-" + axisString + " Comp:" + comp.ToString("F3");
+            modString = pointString +"-"+ axisString + " L" + holeLimitModeComboBox.Text + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C " + holeCompModeComboBox.Text + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
 
             // prep new data
             newData = new List<FaceData>(loader.Triangles.Count);
-            var yOffset = bbData.maxY / -2.0f;
+            var yOffset = bbData.maxY / -2.0f; // TODO replace by refPoint
 
             if (holeCompModeComboBox.Text == "PCT")
             {
@@ -939,55 +974,21 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             GL.NewList(holeList, ListMode.Compile);
             GL.Begin(PrimitiveType.Lines);
 
-            var cylData = new Vector3[numCylSection];
+            var maxOffset = refAxis *  16384.0f;
+            var minOffset = refAxis * -16384.0f;
 
-            var maxOffset = new Vector3(0.0f, -yOffset, 0.0f);
-            var midOffset = new Vector3(0.0f, -yOffset, 0.0f);
-            var minOffset = new Vector3(0.0f, -yOffset, 0.0f);
-            // TODO add actual selected center offset per C123 and N123
-            if (holeAxisRadioButtonX.Checked)
-            {
-                maxOffset.X = bbData.maxX + 0.001f;
-                midOffset.X = 0.0f;
-                minOffset.X = bbData.minX - 0.001f;
+            maxOffset += refPoint;
+            maxOffset = clampSegmentToBBox(refPoint, maxOffset);
+            minOffset += refPoint;
+            minOffset = clampSegmentToBBox(refPoint, minOffset);
 
-                var m = new float[16];
-                mat_rotation(1.5707f, Vector3.UnitZ, ref m);
-                for (var i = 0; i < numCylSection; ++i) cylData[i] = mat_apply(ref m, baseCylVertices[i]);
-            }
-            if (holeAxisRadioButtonY.Checked)
-            {
-                maxOffset.Y = bbData.maxY + 0.001f;
-                midOffset.Y = bbData.maxY / 2.0f;
-                minOffset.Y = -0.001f;
-
-                for (var i = 0; i < numCylSection; ++i) cylData[i] = baseCylVertices[i];
-            }
-            if (holeAxisRadioButtonZ.Checked)
-            {
-                maxOffset.Z = bbData.maxZ + 0.001f;
-                midOffset.Z = 0.0f;
-                minOffset.Z = bbData.minZ - 0.001f;
-
-                var m = new float[16];
-                mat_rotation(1.5707f, Vector3.UnitX, ref m);
-                for (var i = 0; i < numCylSection; ++i) cylData[i] = mat_apply(ref m, baseCylVertices[i]);
-            }
-
-            yOffset = -yOffset; // ???
-
-            GL.Color4(holeColor);
-            for (var i = 0; i < numCylSection; ++i)
-            {
-                GL.Vertex3(limit * cylData[i] + minOffset);
-                GL.Vertex3(limit * cylData[(i + 1) % numCylSection] + minOffset);
-
-                GL.Vertex3(limit * cylData[i] + midOffset);
-                GL.Vertex3(limit * cylData[(i + 1) % numCylSection] + midOffset);
-
-                GL.Vertex3(limit * cylData[i] + maxOffset);
-                GL.Vertex3(limit * cylData[(i + 1) % numCylSection] + maxOffset);
-            }
+            //GL.Color4(holeColor);
+            GL.Color4(Color.Red);
+            gen_circle(maxOffset, refAxis, limit);
+            GL.Color4(Color.Lime);
+            gen_circle(refPoint, refAxis, limit);
+            GL.Color4(Color.Blue);
+            gen_circle(minOffset, refAxis, limit);
 
             GL.End();
             GL.EndList();
@@ -1409,6 +1410,13 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             return (Math.Abs(a.X - b.X) < epsilon) && (Math.Abs(a.Y - b.Y) < epsilon) && (Math.Abs(a.Z - b.Z) < epsilon);
         }
 
+        private static float sqXYdist(Vector3 a, float x, float y)
+        {
+            float dx = a.X - x;
+            float dy = a.Y - y;
+            return (dx * dx) + (dy * dy);
+        }
+
         private Vector3 changeLengthBy(Vector3 v, float comp, float offsetY)
         {
             if (holeAxisRadioButtonX.Checked)
@@ -1484,7 +1492,62 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             return false;
         }
 
+        private Vector3 clampSegmentToBBox(Vector3 p1, Vector3 p2)
+        {
+            // assuming that p1 is inside the box already
+            var segLength = Vector3.Distance(p2, p1);
+            if (segLength <= epsilon) return p2;
+            var segDelta = p2 - p1;
+            var segNormal = segDelta / segLength;
+            if (segDelta.X < 0.0f) segDelta.X = -segDelta.X;
+            if (segDelta.Y < 0.0f) segDelta.Y = -segDelta.Y;
+            if (segDelta.Z < 0.0f) segDelta.Z = -segDelta.Z;
 
+            if (p2.X > bbData.maxX)
+            {
+                var newLength = Math.Abs(bbData.maxX - p1.X);
+                p2 = p1 + (segNormal * segLength * newLength / segDelta.X);
+            } else if (p2.X < bbData.minX)
+            {
+                var newLength = Math.Abs(bbData.minX - p1.X);
+                p2 = p1 + (segNormal * segLength * newLength / segDelta.X);
+            }
+
+            if (p2.Y > bbData.maxY)
+            {
+                var newLength = Math.Abs(bbData.maxY - p1.Y);
+                p2 = p1 + (segNormal * segLength * newLength / segDelta.Y);
+            }
+            else if (p2.Y < bbData.minY)
+            {
+                var newLength = Math.Abs(bbData.minY - p1.Y);
+                p2 = p1 + (segNormal * segLength * newLength / segDelta.Y);
+            }
+
+            if (p2.Z > bbData.maxZ)
+            {
+                var newLength = Math.Abs(bbData.maxZ - p1.Z);
+                p2 = p1 + (segNormal * segLength * newLength / segDelta.Z);
+            }
+            else if (p2.Z < bbData.minZ)
+            {
+                var newLength = Math.Abs(bbData.minZ - p1.Z);
+                p2 = p1 + (segNormal * segLength * newLength / segDelta.Z);
+            }
+
+
+            /*
+            if (v.X > bbData.maxX) v = (v.X != 0.0f) ? v * (bbData.maxX / v.X) : new Vector3(bbData.maxX, v.Y, v.Z);
+            if (v.X < bbData.minX) v = (v.X != 0.0f) ? v * (bbData.minX / v.X) : new Vector3(bbData.minX, v.Y, v.Z);
+
+            if (v.Y > bbData.maxY) v = (v.Y != 0.0f) ? v * (bbData.maxY / v.Y) : new Vector3(v.X, bbData.maxY, v.Z);
+            if (v.Y < bbData.minY) v = (v.Y != 0.0f) ? v * (bbData.minY / v.Y) : new Vector3(v.X, bbData.minY, v.Z);
+
+            if (v.Z > bbData.maxZ) v = (v.Z != 0.0f) ? v * (bbData.maxZ / v.Z) : new Vector3(v.X, v.Y, bbData.maxZ);
+            if (v.Z < bbData.minZ) v = (v.Z != 0.0f) ? v * (bbData.minZ / v.Z) : new Vector3(v.X, v.Y, bbData.minZ);
+            */
+            return p2;
+        }
         #endregion
 
         #region matrix helper methods
@@ -1558,10 +1621,27 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var w = m[3] * a0 + m[7] * a1 + m[11] * a2 + m[15];
             if ((w < epsilon) && (w > -epsilon) || (w == float.NaN)) w = 1.0f;
 
-            a[0] = (m[0] * a0 + m[4] * a1 + m[8] * a2 + m[12]) / w;
-            a[1] = (m[1] * a0 + m[5] * a1 + m[9] * a2 + m[13]) / w;
+            a[0] = (m[0] * a0 + m[4] * a1 + m[8]  * a2 + m[12]) / w;
+            a[1] = (m[1] * a0 + m[5] * a1 + m[9]  * a2 + m[13]) / w;
             a[2] = (m[2] * a0 + m[6] * a1 + m[10] * a2 + m[14]) / w;
 
+            return a;
+        }
+
+        private Vector3 mat_apply_4(ref float[] m, Vector3 a)
+        {
+            var a0 = a[0];
+            var a1 = a[1];
+            var a2 = a[2];
+           // var a3 = 0.0f;
+
+            var w = m[3] * a0 + m[7] * a1 + m[11] * a2 + m[15];
+            if ((w < epsilon) && (w > -epsilon) || (w == float.NaN)) w = 1.0f;
+
+            a[0] = ((m[0] * a0) + (m[4] * a1) + ( m[8] * a2) + (m[12] * 1.0f)) / w;
+            a[1] = ((m[1] * a0) + (m[5] * a1) + ( m[9] * a2) + (m[13] * 1.0f)) / w;
+            a[2] = ((m[2] * a0) + (m[6] * a1) + (m[10] * a2) + (m[14] * 0.0f)) / w;
+           // float a[3] = (m[3] * a0) + (m[7] * a1) + (m[11] * a2) + (m[15] * a3);
             return a;
         }
 
@@ -1604,6 +1684,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             res[14] = 0.0f;
             res[15] = 1.0f;
         }
+
+        private void mat_identity(ref float[] a)
+        {
+            a[0]  = 1.0f; a[1]  = 0.0f; a[2]  = 0.0f; a[3]  = 0.0f;
+            a[4]  = 0.0f; a[5]  = 1.0f; a[6]  = 0.0f; a[7]  = 0.0f;
+            a[8]  = 0.0f; a[9]  = 0.0f; a[10] = 1.0f; a[11] = 0.0f;
+            a[12] = 0.0f; a[13] = 0.0f; a[14] = 0.0f; a[15] = 1.0f;
+        }
         #endregion
 
         #region mesurements methods
@@ -1615,16 +1703,16 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var oldP3index = iP3;
 
             var newIndex = -1;
+            var z = 1000.0f; // smaller Z are closer to viewport
 
-            var d = MesureSelectingMaxDistSquare;
-            var mousePoint = new Vector3(X - halfViewWidthF, -Y + halfViewHeightF, 0.0f);
             for (var i = 0; i < viewVertices.Count; ++i)
             {
-                var newD = Vector3.DistanceSquared(viewVertices[i], mousePoint);
-                if ((newD < MesureSelectingMaxDistSquare) && (newD < d))
+                var newD = sqXYdist(viewVertices[i], X - halfViewWidthF, -Y + halfViewHeightF);
+                if ((newD < MesureSelectingMaxDistSquare) && (viewVertices[i].Z < z))
                 {
-                    d = newD;
+
                     newIndex = i;
+                    z = viewVertices[i].Z;
                 }
             }
             if (newIndex != -1)
@@ -1661,7 +1749,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
         }
 
-        private void updateMesurePanelData()
+         private void updateMesurePanelData()
         {
             resetMesurePanel();
             if (!UniqueVerticesReady) return;
@@ -1831,6 +1919,19 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             labelANG.Text = defaultLabelText;
         }
 
+        private void button_repos_Click(object sender, EventArgs e)
+        {
+            if (!MesurementsPanel.Visible) return;
+            if ((iP1 == -1) || (iP2 == -1) || (iP3 == -1)) return;
+            // create rotation matrix from N123 to Y
+            // rotate model
+            // gen BBox
+            // offset to origin
+            // update BBox
+            // update model and outline vertices
+            // regen lists
+
+        }
 
         #endregion
 
@@ -2001,7 +2102,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             // draw overlay
             if (UniqueVerticesReady && MesurementsPanel.Visible)
             {                
-                for (var i = 0; i < viewVertices.Count; ++i) viewVertices[i] = mat_apply(ref projectionViewMatrix, uniqueVertices[i]) * viewScale;
+                for (var i = 0; i < viewVertices.Count; ++i) viewVertices[i] = mat_apply_4(ref projectionViewMatrix, uniqueVertices[i]) * viewScale;
 
                 GL.MatrixMode(MatrixMode.Projection);
                 GL.LoadMatrix(overlayProjectionMatrix);
@@ -2145,7 +2246,34 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
         }
 
-       
+        private void gen_circle(Vector3 c, Vector3 n, float d)
+        {
+            var cylData = new Vector3[numCylSection];
+            d = d / 2.0f;
+            var p = Vector3.Cross(n, Vector3.UnitY);
+            if (p.LengthSquared > epsilon)
+            {
+                var a = Vector3.CalculateAngle(n, Vector3.UnitY);
+                var m = new float[16];
+                mat_rotation(-a, p, ref m);
+                for (var i = 0; i < numCylSection; ++i) cylData[i] = mat_apply(ref m, baseCylVertices[i]);
+            }
+            else
+            {
+                for (var i = 0; i < numCylSection; ++i) cylData[i] = baseCylVertices[i];
+            }
+
+            for (var i = 0; i < numCylSection; ++i)
+            {
+                var v1 = (d * cylData[i]) + c;
+                var v2 = (d * cylData[(i + 1) % numCylSection]) + c;
+
+                GL.Vertex3(v1);
+                GL.Vertex3(v2);
+            }
+        }
+
+
         private void drawBuildVolume()
         {
             // back

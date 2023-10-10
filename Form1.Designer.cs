@@ -30,6 +30,7 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.MesurementsPanel = new System.Windows.Forms.Panel();
+            this.button_repos = new System.Windows.Forms.Button();
             this.label14 = new System.Windows.Forms.Label();
             this.comboBoxCIRCLE3 = new System.Windows.Forms.ComboBox();
             this.comboBoxCIRCLE2 = new System.Windows.Forms.ComboBox();
@@ -123,6 +124,7 @@
             this.MesurementsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.MesurementsPanel.BackColor = System.Drawing.SystemColors.Control;
             this.MesurementsPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.MesurementsPanel.Controls.Add(this.button_repos);
             this.MesurementsPanel.Controls.Add(this.label14);
             this.MesurementsPanel.Controls.Add(this.comboBoxCIRCLE3);
             this.MesurementsPanel.Controls.Add(this.comboBoxCIRCLE2);
@@ -184,6 +186,16 @@
             this.MesurementsPanel.Size = new System.Drawing.Size(301, 370);
             this.MesurementsPanel.TabIndex = 8;
             this.MesurementsPanel.Visible = false;
+            // 
+            // button_repos
+            // 
+            this.button_repos.Location = new System.Drawing.Point(114, 343);
+            this.button_repos.Name = "button_repos";
+            this.button_repos.Size = new System.Drawing.Size(75, 23);
+            this.button_repos.TabIndex = 65;
+            this.button_repos.Text = "Re Pos";
+            this.button_repos.UseVisualStyleBackColor = true;
+            this.button_repos.Click += new System.EventHandler(this.button_repos_Click);
             // 
             // label14
             // 
@@ -806,17 +818,19 @@
             this.holeRefComboBox.Size = new System.Drawing.Size(80, 21);
             this.holeRefComboBox.TabIndex = 16;
             this.holeRefComboBox.Text = "Model";
+            this.holeRefComboBox.SelectedIndexChanged += new System.EventHandler(this.centerCompTrackBar_ValueChanged);
             // 
             // holeAxisRadioButtonC123
             // 
             this.holeAxisRadioButtonC123.AutoSize = true;
-            this.holeAxisRadioButtonC123.Location = new System.Drawing.Point(359, 4);
+            this.holeAxisRadioButtonC123.Location = new System.Drawing.Point(193, 4);
             this.holeAxisRadioButtonC123.Name = "holeAxisRadioButtonC123";
             this.holeAxisRadioButtonC123.Size = new System.Drawing.Size(170, 17);
             this.holeAxisRadioButtonC123.TabIndex = 15;
             this.holeAxisRadioButtonC123.Tag = "M";
             this.holeAxisRadioButtonC123.Text = "Mesured P1-P2-P3 Center Axis";
             this.holeAxisRadioButtonC123.UseVisualStyleBackColor = true;
+            this.holeAxisRadioButtonC123.CheckedChanged += new System.EventHandler(this.centerCompTrackBar_ValueChanged);
             // 
             // label7
             // 
@@ -853,7 +867,7 @@
             // 
             this.holeAxisRadioButtonY.AutoSize = true;
             this.holeAxisRadioButtonY.Checked = true;
-            this.holeAxisRadioButtonY.Location = new System.Drawing.Point(127, 4);
+            this.holeAxisRadioButtonY.Location = new System.Drawing.Point(124, 4);
             this.holeAxisRadioButtonY.Name = "holeAxisRadioButtonY";
             this.holeAxisRadioButtonY.Size = new System.Drawing.Size(32, 17);
             this.holeAxisRadioButtonY.TabIndex = 11;
@@ -866,7 +880,7 @@
             // holeAxisRadioButtonZ
             // 
             this.holeAxisRadioButtonZ.AutoSize = true;
-            this.holeAxisRadioButtonZ.Location = new System.Drawing.Point(165, 4);
+            this.holeAxisRadioButtonZ.Location = new System.Drawing.Point(159, 4);
             this.holeAxisRadioButtonZ.Name = "holeAxisRadioButtonZ";
             this.holeAxisRadioButtonZ.Size = new System.Drawing.Size(32, 17);
             this.holeAxisRadioButtonZ.TabIndex = 10;
@@ -1032,7 +1046,7 @@
             // 
             this.statusLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.statusLabel.AutoSize = true;
-            this.statusLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(105)))), ((int)(((byte)(219)))));
+            this.statusLabel.BackColor = System.Drawing.Color.Transparent;
             this.statusLabel.Font = new System.Drawing.Font("Tahoma", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.statusLabel.Location = new System.Drawing.Point(5, 691);
             this.statusLabel.Name = "statusLabel";
@@ -1063,9 +1077,9 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(128)))), ((int)(((byte)(255)))));
             this.ClientSize = new System.Drawing.Size(1179, 721);
+            this.Controls.Add(this.holeCompPanel);
             this.Controls.Add(this.statusLabel);
             this.Controls.Add(this.compCtrlPanel);
-            this.Controls.Add(this.holeCompPanel);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.MesurementsPanel);
             this.DoubleBuffered = true;
@@ -1183,6 +1197,7 @@
         private System.Windows.Forms.Label label13;
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.Button button_repos;
     }
 }
 
