@@ -93,7 +93,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         public List<int> uniqueIndices;
         public List<List<int>> uniqueBoundTriangles;
 
-        public class vertexPackedData:IComparable<vertexPackedData> {
+        public class vertexPackedData : IComparable<vertexPackedData> {
             public Vector3 pos;
             public float distance;
             public int originalVertexIndex;
@@ -104,9 +104,9 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             {
                 if (other == null) return -1;
                 if (this.distance < other.distance) return -1;
-                if (this.distance > other.distance) return  1;
+                if (this.distance > other.distance) return 1;
                 return 0;
-            } 
+            }
         }
         public class trianglePackedData
         {
@@ -199,11 +199,11 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 Console.WriteLine("error reading background color assembly properties: " + ex.Message);
             }
 
-            viewWidth  = ClientSize.Width;
+            viewWidth = ClientSize.Width;
             viewHeight = ClientSize.Height;
-            viewWidthF  = (float)viewWidth;
+            viewWidthF = (float)viewWidth;
             viewHeightF = (float)viewHeight;
-            halfViewWidthF  = viewWidthF / 2.0f;
+            halfViewWidthF = viewWidthF / 2.0f;
             halfViewHeightF = viewHeightF / 2.0f;
             viewScale = new Vector3(halfViewWidthF, halfViewHeightF, 1.0f);
 
@@ -416,18 +416,18 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 backgroundWorker_UniqueVertex.RunWorkerAsync();
 
                 ReDraw();
-            }  
+            }
         }
         #endregion
 
         #region viewport and display
         private void resetSizes()
         {
-            viewWidth  = ClientSize.Width;
+            viewWidth = ClientSize.Width;
             viewHeight = ClientSize.Height;
-            viewWidthF  = (float)viewWidth;
+            viewWidthF = (float)viewWidth;
             viewHeightF = (float)viewHeight;
-            halfViewWidthF  = viewWidthF / 2.0f;
+            halfViewWidthF = viewWidthF / 2.0f;
             halfViewHeightF = viewHeightF / 2.0f;
             viewScale = new Vector3(halfViewWidthF, halfViewHeightF, 1.0f);
 
@@ -508,7 +508,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             GL.DeleteLists(compList, 1);
             GL.DeleteLists(outlineList, 1);
         }
-         
+
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
@@ -641,7 +641,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     statusLabel.Text = $"Renamed {oldName} to {currentFile}";
                 }
                 else Console.WriteLine($"Rename cancelled");
-             }
+            }
 
             // mesurements
             if (e.KeyCode == Keys.M)
@@ -650,7 +650,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
             if ((e.KeyCode == Keys.D1) && MesurementsPanel.Visible)
             {
-               // Mselecting = true;
+                // Mselecting = true;
                 MesureSelectingPoint = 1;
             }
             if ((e.KeyCode == Keys.D2) && MesurementsPanel.Visible)
@@ -660,10 +660,10 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
             if ((e.KeyCode == Keys.D3) && MesurementsPanel.Visible)
             {
-               // Mselecting = true;
+                // Mselecting = true;
                 MesureSelectingPoint = 3;
             }
-            if ((e.KeyCode == Keys.Escape)  && MesurementsPanel.Visible)
+            if ((e.KeyCode == Keys.Escape) && MesurementsPanel.Visible)
             {
                 iP1 = -1;
                 iP2 = -1;
@@ -725,8 +725,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
                 ReDraw();
             }
-                mouse_x = e.X;
-                mouse_y = e.Y;
+            mouse_x = e.X;
+            mouse_y = e.Y;
 
             if ((MesurementsPanel.Visible) && (MesureSelectingPoint > 0) && (UniqueVerticesReady)) checkPointSelect(e.X, e.Y);
         }
@@ -770,7 +770,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             var offsetX = trackBarX.Value / 40.0f / 2.0f; // half of overall error (applied on 2 sides)
             var offsetY = trackBarY.Value / 40.0f / 2.0f;
             var offsetZ = trackBarZ.Value / 40.0f / 2.0f;
-            statusLabel.Text = "Total compensation (mm) X:" + (2.0f* offsetX).ToString("F3") + " Y:" + (2.0f * offsetY).ToString("F3") + " Z:" + (2.0f * offsetZ).ToString("F3");
+            statusLabel.Text = "Total compensation (mm) X:" + (2.0f * offsetX).ToString("F3") + " Y:" + (2.0f * offsetY).ToString("F3") + " Z:" + (2.0f * offsetZ).ToString("F3");
             modString = " x" + (100 * trackBarX.Value / 40).ToString("D3") + "y" + (100 * trackBarY.Value / 40).ToString("D3") + "z" + (100 * trackBarZ.Value / 40).ToString("D3");
             // Prep opt and compare data
             var uniqueVertexOffsets = new Vector3[uniqueVertices.Count];
@@ -857,10 +857,8 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             ReDraw();
         }
 
-        // TODO point
-        // TODO P1P2P3 axis
         private void centerCompTrackBar_ValueChanged(object sender, EventArgs e)
-        { 
+        {
             if (!holeCompPanel.Visible) return;
 
             // recomp with new value and reset all data and list
@@ -896,22 +894,30 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             switch (holeRefComboBox.SelectedIndex)
             {
                 case 0: break;
-                case 1: refPoint = P1;   pointString = "P1";   break;
-                case 2: refPoint = P2;   pointString = "P2";   break;
-                case 3: refPoint = P3;   pointString = "P3";   break;
-                case 4: refPoint = M12;  pointString = "M12";  break;
-                case 5: refPoint = M23;  pointString = "M23";  break;
-                case 6: refPoint = M31;  pointString = "M31";  break;
+                case 1: refPoint = P1; pointString = "P1"; break;
+                case 2: refPoint = P2; pointString = "P2"; break;
+                case 3: refPoint = P3; pointString = "P3"; break;
+                case 4: refPoint = M12; pointString = "M12"; break;
+                case 5: refPoint = M23; pointString = "M23"; break;
+                case 6: refPoint = M31; pointString = "M31"; break;
                 case 7: refPoint = C123; pointString = "C123"; break;
             }
 
 
             statusLabel.Text = "Hole radius limit: " + limit.ToString("F3") + " " + pointString + "-" + axisString + " Comp:" + comp.ToString("F3");
-            modString = pointString +"-"+ axisString + " L" + holeLimitModeComboBox.Text + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C " + holeCompModeComboBox.Text + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
+            modString = pointString + "-" + axisString + " L" + holeLimitModeComboBox.Text + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C " + holeCompModeComboBox.Text + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
 
             // prep new data
             newData = new List<FaceData>(loader.Triangles.Count);
-            var yOffset = bbData.maxY / -2.0f; // TODO replace by refPoint
+
+            // TODO new comp:
+            // offset by refPoint
+            // check dist along refAxis, min max
+            // if eligible comp per pct or mm
+            // offset back by refPoint
+            // generate draw list
+
+            var yOffset = bbData.maxY / -2.0f;
 
             if (holeCompModeComboBox.Text == "PCT")
             {
@@ -974,19 +980,17 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             GL.NewList(holeList, ListMode.Compile);
             GL.Begin(PrimitiveType.Lines);
 
-            var maxOffset = refAxis *  16384.0f;
-            var minOffset = refAxis * -16384.0f;
 
-            maxOffset += refPoint;
-            maxOffset = clampSegmentToBBox(refPoint, maxOffset);
-            minOffset += refPoint;
-            minOffset = clampSegmentToBBox(refPoint, minOffset);
+            var bbLimits = clampVectorToBBox(refPoint, refAxis);
+            var minOffset = bbLimits.Item1;
+            var maxOffset = bbLimits.Item2;
+            var midOffet = (bbLimits.Item1 + bbLimits.Item2) / 2.0f;
 
             //GL.Color4(holeColor);
             GL.Color4(Color.Red);
             gen_circle(maxOffset, refAxis, limit);
             GL.Color4(Color.Lime);
-            gen_circle(refPoint, refAxis, limit);
+            gen_circle(midOffet, refAxis, limit);
             GL.Color4(Color.Blue);
             gen_circle(minOffset, refAxis, limit);
 
@@ -1191,7 +1195,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             // extract indices
             for (int i = 0; i < data.Count; ++i)
-            { 
+            {
                 uniqueIndices[data[i].originalVertexIndex] = data[data[i].sortedUniqueIndex].extractedUniqueIndex;
                 var tri = data[i].originalVertexIndex / 3;
                 var ver = data[i].originalVertexIndex % 3;
@@ -1230,7 +1234,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             loadStart = perfCount.ElapsedMilliseconds;
 
             var data = new List<trianglePackedData>();
-           
+
 
             // prepare data
             for (var i = 0; i < uniqueIndices.Count; i += 3)
@@ -1267,7 +1271,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             for (var i = 0; i < data.Count; ++i)
             {
                 // shared edge with t1, not checked before
-                if ((data[i].ti1.Count > 0) && (data[i].ti1[0] > i)) 
+                if ((data[i].ti1.Count > 0) && (data[i].ti1[0] > i))
                 {
                     var edgesIndices = findIn2Array(data[i].indiceList, data[data[i].ti1[0]].indiceList);
                     var nes = new edgeStruct
@@ -1361,14 +1365,14 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
         private void CancelBGW()
         {
-            if ( (backgroundWorker_Outline.IsBusy) && (backgroundWorker_Outline.WorkerSupportsCancellation == true))
+            if ((backgroundWorker_Outline.IsBusy) && (backgroundWorker_Outline.WorkerSupportsCancellation == true))
             {
                 backgroundWorker_Outline.CancelAsync();
                 _BGW_EF_resetEvent.WaitOne();
                 OutlineReady = false;
                 Application.DoEvents();
             }
-            if ( (backgroundWorker_UniqueVertex.IsBusy) && (backgroundWorker_UniqueVertex.WorkerSupportsCancellation == true))
+            if ((backgroundWorker_UniqueVertex.IsBusy) && (backgroundWorker_UniqueVertex.WorkerSupportsCancellation == true))
             {
                 backgroundWorker_UniqueVertex.CancelAsync();
                 _BGW_UV_resetEvent.WaitOne();
@@ -1492,13 +1496,54 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             return false;
         }
 
-        private Vector3 clampSegmentToBBox(Vector3 p1, Vector3 p2)
+        private Tuple<Vector3, Vector3> clampVectorToBBox(Vector3 orig, Vector3 norm)
         {
+            float X1 = (bbData.minX - orig.X) / norm.X;
+            float X2 = (bbData.maxX - orig.X) / norm.X;
+            if (float.IsNaN(X1)) X1 = 0.0f;
+            if (float.IsNaN(X2)) X2 = 0.0f;
+            if (X2 < X1)
+            {
+                var Xb = X1;
+                X1 = X2;
+                X2 = Xb;
+            }
+
+            float Y1 = (bbData.minY - orig.Y) / norm.Y;
+            float Y2 = (bbData.maxY - orig.Y) / norm.Y;
+            if (float.IsNaN(Y1)) Y1 = 0.0f;
+            if (float.IsNaN(Y2)) Y2 = 0.0f;
+            if (Y2 < Y1)
+            {
+                var Yb = Y1;
+                Y1 = Y2;
+                Y2 = Yb;
+            }
+
+            float Z1 = (bbData.minZ - orig.Z) / norm.Z;
+            float Z2 = (bbData.maxZ - orig.Z) / norm.Z;
+            if (float.IsNaN(Z1)) Z1 = 0.0f;
+            if (float.IsNaN(Z2)) Z2 = 0.0f;
+            if (Z2 < Z1)
+            {
+                var Zb = Z1;
+                Z1 = Z2;
+                Z2 = Zb;
+            }
+
+
+            var m0 = Math.Max(X1, Math.Max(Y1, Z1));
+            var m1 = Math.Min(X2, Math.Min(Y2, Z2));
+
+            return new Tuple<Vector3, Vector3>(orig + (m0 * norm), orig + (m1 * norm));
+
+        /*
             // assuming that p1 is inside the box already
             var segLength = Vector3.Distance(p2, p1);
-            if (segLength <= epsilon) return p2;
+           // if (segLength <= epsilon) return p2;
             var segDelta = p2 - p1;
             var segNormal = segDelta / segLength;
+
             if (segDelta.X < 0.0f) segDelta.X = -segDelta.X;
             if (segDelta.Y < 0.0f) segDelta.Y = -segDelta.Y;
             if (segDelta.Z < 0.0f) segDelta.Z = -segDelta.Z;
@@ -1535,18 +1580,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                 p2 = p1 + (segNormal * segLength * newLength / segDelta.Z);
             }
 
-
-            /*
-            if (v.X > bbData.maxX) v = (v.X != 0.0f) ? v * (bbData.maxX / v.X) : new Vector3(bbData.maxX, v.Y, v.Z);
-            if (v.X < bbData.minX) v = (v.X != 0.0f) ? v * (bbData.minX / v.X) : new Vector3(bbData.minX, v.Y, v.Z);
-
-            if (v.Y > bbData.maxY) v = (v.Y != 0.0f) ? v * (bbData.maxY / v.Y) : new Vector3(v.X, bbData.maxY, v.Z);
-            if (v.Y < bbData.minY) v = (v.Y != 0.0f) ? v * (bbData.minY / v.Y) : new Vector3(v.X, bbData.minY, v.Z);
-
-            if (v.Z > bbData.maxZ) v = (v.Z != 0.0f) ? v * (bbData.maxZ / v.Z) : new Vector3(v.X, v.Y, bbData.maxZ);
-            if (v.Z < bbData.minZ) v = (v.Z != 0.0f) ? v * (bbData.minZ / v.Z) : new Vector3(v.X, v.Y, bbData.minZ);
-            */
-            return p2;
+            return p2;*/
         }
         #endregion
 
@@ -1923,6 +1957,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
         {
             if (!MesurementsPanel.Visible) return;
             if ((iP1 == -1) || (iP2 == -1) || (iP3 == -1)) return;
+            // TODO reposition model per N123 axis
             // create rotation matrix from N123 to Y
             // rotate model
             // gen BBox
