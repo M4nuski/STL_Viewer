@@ -85,6 +85,12 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             public int T2; // index of triangle 2
         }
 
+        public class SelectedFaceData
+        {
+            public Vector3 pV1, pV2, pV3; // match faceData with non-null Vector3 being the projected point along refAxis
+            public float dV1, dV2, dV3;
+        }
+
         public List<FaceData> newData;
         public indiceStruct[] faceIndices;
 
@@ -907,16 +913,30 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             statusLabel.Text = "Hole radius limit: " + limit.ToString("F3") + " " + pointString + "-" + axisString + " Comp:" + comp.ToString("F3");
             modString = pointString + "-" + axisString + " L" + holeLimitModeComboBox.Text + (100 * centerLimitTrackBar.Value / 4).ToString("D3") + " C " + holeCompModeComboBox.Text + (1000 * centerCompTrackBar.Value / 200).ToString("D4");
 
-            // prep new data
+
             newData = new List<FaceData>(loader.Triangles.Count);
+            foreach(var t in loader.Triangles)
+            {
+                newData.Add(new FaceData()
+                {
+                    V1 = new Vector3(t.V1),
+                    V2 = new Vector3(t.V2),
+                    V3 = new Vector3(t.V3),
+                    Normal = new Vector3(t.Normal),
+                    Color = new Vector4(t.Color)
+
+                });
+            }
+            var selectionIndices = selectVertices(newData, refPoint, refAxis, limit / 2.0f);
+            applyModification(newData, selectionIndices, comp);
 
             // TODO new comp:
             // offset by refPoint
-            // check dist along refAxis, min max
+            // select by dist along refAxis, min max
             // if eligible comp per pct or mm
             // offset back by refPoint
             // generate draw list
-
+            /*
             var yOffset = bbData.maxY / -2.0f;
 
             if (holeCompModeComboBox.Text == "PCT")
@@ -967,7 +987,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
                     Color = loader.Triangles[i].Color
                 });
             }
-
+            */
             // create render list
             GL.DeleteLists(compList, 1);
             compList = GL.GenLists(1);
@@ -999,6 +1019,94 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
 
             ReDraw();
         }
+        private List<SelectedFaceData> selectVertices(List<FaceData> newData, Vector3 refPoint, Vector3 refAxis, float limit)
+        {
+            float sqrLimit = limit * limit;
+            Func<float, bool> selector = (sqrD) => false;
+
+            if (holeLimitModeComboBox.Text == "Max")
+            {
+                selector = (sqrD) => sqrD <= sqrLimit;
+            } else if (holeLimitModeComboBox.Text == "Min")
+            {
+                selector = (sqrD) => sqrD >= sqrLimit;
+            }
+
+            Vector3 proj;
+            float distSquared;
+
+            var res = new List<SelectedFaceData>(newData.Count);
+            for (int i = 0; i < newData.Count; ++i)
+            {
+                res.Add(new SelectedFaceData());
+                // projection
+                // (dot((V1 - refPoint), refAxis) * refAxis) + refPoint)
+                // distanceSquared(proj, V1);
+                proj = (Vector3.Dot(newData[i].V1 - refPoint, refAxis) * refAxis) + refPoint;
+                distSquared = Vector3.DistanceSquared(proj, newData[i].V1);
+                if (selector(distSquared))
+                {
+                    res[i].pV1 = new Vector3(proj);
+                    res[i].dV1 = (float)Math.Sqrt(distSquared);
+                }
+                else res[i].dV1 = -1.0f;
+
+                proj = (Vector3.Dot(newData[i].V2 - refPoint, refAxis) * refAxis) + refPoint;
+                distSquared = Vector3.DistanceSquared(proj, newData[i].V2);
+                if (selector(distSquared))
+                {
+                    res[i].pV2 = new Vector3(proj);
+                    res[i].dV2 = (float)Math.Sqrt(distSquared);
+                }
+                else res[i].dV2 = -1.0f;
+
+                proj = (Vector3.Dot(newData[i].V3 - refPoint, refAxis) * refAxis) + refPoint;
+                distSquared = Vector3.DistanceSquared(proj, newData[i].V3);
+                if (selector(distSquared))
+                {
+                    res[i].pV3 = new Vector3(proj);
+                    res[i].dV3 = (float)Math.Sqrt(distSquared);
+                }
+                else res[i].dV3 = -1.0f;
+            }
+
+            return res;
+        }
+
+        private void applyModification(List<FaceData> newData, List<SelectedFaceData> faceSelection, float amount)
+        {
+            Func<Vector3, Vector3, float, Vector3> compensator = (V, P, l) => new Vector3();
+
+            if (holeCompModeComboBox.Text == "PCT")
+            {
+                compensator = (V, P, l) => Vector3.Lerp(P, V, 1.0f + amount);
+            }
+            else  if (holeCompModeComboBox.Text == "mm")
+                {
+                compensator = (V, P, l) => {
+                    var nl = l + amount;
+                    if (nl <= 0.001f) return P;
+                    return Vector3.Lerp(P, V, nl / l);
+                };
+            }
+
+            for (int i = 0; i < newData.Count; ++i)
+            {
+                if (faceSelection[i].dV1 > 0.001f)
+                {
+                    newData[i].V1 = compensator(newData[i].V1, faceSelection[i].pV1, faceSelection[i].dV1);
+                }
+                if (faceSelection[i].dV2 > 0.001f)
+                {
+                    newData[i].V2 = compensator(newData[i].V2, faceSelection[i].pV2, faceSelection[i].dV2);
+                }
+                if (faceSelection[i].dV3 > 0.001f)
+                {
+                    newData[i].V3 = compensator(newData[i].V3, faceSelection[i].pV3, faceSelection[i].dV3);
+                }
+            }
+        }
+
 
         #endregion
 
