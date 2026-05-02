@@ -1039,8 +1039,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             for (int i = 0; i < newData.Count; ++i)
             {
                 res.Add(new SelectedFaceData());
-                // projection
-                // (dot((V1 - refPoint), refAxis) * refAxis) + refPoint)
+                // projection = (dot((V1 - refPoint), refAxis) * refAxis) + refPoint
                 // distanceSquared(proj, V1);
                 proj = (Vector3.Dot(newData[i].V1 - refPoint, refAxis) * refAxis) + refPoint;
                 distSquared = Vector3.DistanceSquared(proj, newData[i].V1);
@@ -1071,6 +1070,7 @@ namespace STLViewer // OpenTK OpenGL 2.0 Immediate mode with pre compiled lists,
             }
 
             return res;
+
         }
 
         private void applyModification(List<FaceData> newData, List<SelectedFaceData> faceSelection, float amount)
